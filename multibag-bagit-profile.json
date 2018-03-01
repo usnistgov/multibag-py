@@ -1,0 +1,19 @@
+{
+    "BagIt-Profile-Info": { 
+        "BagIt-Profile-Identifier": "https://raw.githubusercontent.com/usnistgov/pymultibag/master/multibag-bagit-profile.json",
+        "Source-Organization": "National Institute of Standards and Technology",
+        "Contact-Name": "Raymond Plante",
+        "Contact-Email": "raymond.plante@nist.gov", 
+        "External-Description": "A BagIt profile describing a bag that is part of a bag aggregation that can be logically combined into a larger single bag.  This profile should be considered a draft version.",
+        "Version":"0.2"
+    },
+    "Bag-Info": {
+        "Multibag-Version": {
+            "required": true,
+            "repeatable": false
+        },
+        "Multibag-Reference": {
+            "required": false
+        }
+    }
+}
