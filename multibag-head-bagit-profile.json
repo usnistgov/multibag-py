@@ -27,7 +27,7 @@
         },
         "Multibag-Head-Version": {
             "description": "the version of the bag aggregation that the current bag is the head bag for; the presence of this tag identifies this bag as a head bag",
-            "required": false,
+            "required": true,
             "repeatable": false
         },
         "Multibag-Head-Deprecates": {
@@ -51,5 +51,8 @@
     "Allow-Fetch.txt": true,
     "Accept-Serialization": [ "application/zip" ],
     "Accept-BagIt-Version": [ "0.97" ],
-    "Tag-Files-Required": [  ]
+    "Tag-Files-Required": [
+        "multibag/group-members.txt",
+        "multibag/group-directory.txt"
+    ]
 }
