@@ -55,15 +55,22 @@ _This section is normative._
 
 A bag compliant with the Multibag profile MUST contain a `bag-info.txt` file as defined by the BagIt standard.  The Multibag profile defines several metadata elements that can appear in the `bag-info.txt` file using the standard BagIt tag syntax.  The names of the elements and the meanings of their values are as follows:
 
-   $ `Multibag-Version`: The version of the Multibag profile specification that the bag conforms to. The version described by this document is 0.2.
+<dl>
+   <dt> `Multibag-Version` </dt>
+   <dd> The version of the Multibag profile specification that the bag conforms to. The version described by this document is 0.2. </dd>
 
-   $ `Multibag-Reference`: A URL pointing to Multibag specification referred to in the `Mulibag-Version` element.
+   <dt> `Multibag-Reference` </dt>
+   <dd> A URL pointing to Multibag specification referred to in the `Mulibag-Version` element. </dd>
 
-   $ `Multibag-Tag-Directory`: the path relative to the bag's base directory to the multibag-specific tag directory.
+   <dt> `Multibag-Tag-Directory` </dt>
+   <dd> the path relative to the bag's base directory to the multibag-specific tag directory. </dd>
 
-   $ `Multibag-Head-Version`: the version of the bag aggregation that the current bag is the head bag for (see notes below).
+   <dt> `Multibag-Head-Version` </dt>
+   <dd> the version of the bag aggregation that the current bag is the head bag for (see notes below). </dd>
 
-   $ `Multibag-Head-Deprecates`: one or two tokens, separated by a comma, where the first field is the version of another Multibag aggregation that the current aggregation deprecates, and the second field is the name of the head bag for the deprecated aggregation.
+   <dt> `Multibag-Head-Deprecates` </dt>
+   <dd> one or two tokens, separated by a comma, where the first field is the version of another Multibag aggregation that the current aggregation deprecates, and the second field is the name of the head bag for the deprecated aggregation. </dd>
+<dl>
 
 The use of these metadata elements are subject to the following constraints:
 
