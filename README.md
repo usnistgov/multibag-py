@@ -1,5 +1,18 @@
 # pymultibag
-This python library provides a reference implementation for the Multibag BagIt Profile
+This python library provides a reference implementation for the
+Multibag BagIt Profile.
+
+## About BagIt
+
+The Multibag standard is a profile on the [BagIt
+standard](https://tools.ietf.org/html/draft-kunze-bagit).  BagIt
+defines a way to package data, metadata, and related files into a
+single coherent package.  Such a package is fundementally represented
+as a directory with a constrained structure.  When the directory is
+serialized into a file (e.g. with zip), it becomes an appropriate way
+to transmit the complete package.
+
+## About the Multibag Profile
 
 The Multibag BagIt Profile defines a means for splitting a data
 aggregation across multiple bags which we refer to as the _Multibag_
