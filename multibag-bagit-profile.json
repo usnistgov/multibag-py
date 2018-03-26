@@ -1,6 +1,6 @@
 {
     "BagIt-Profile-Info": { 
-        "BagIt-Profile-Identifier": "https://raw.githubusercontent.com/usnistgov/pymultibag/master/multibag-bagit-profile.json",
+        "BagIt-Profile-Identifier": "https://raw.githubusercontent.com/usnistgov/multibag-py/master/multibag-bagit-profile.json",
         "Source-Organization": "National Institute of Standards and Technology",
         "Contact-Name": "Raymond Plante",
         "Contact-Email": "raymond.plante@nist.gov", 
