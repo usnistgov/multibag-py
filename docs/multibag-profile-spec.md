@@ -3,12 +3,14 @@
 __Contents__
 * [Overview](#Overview)
 * [The Multibag Data Structure](#The_Multibag_Data_Structure)
+  * [Bag and File Name Restrictions](#Bag_and_File_Name_Restrictions)
 * [Multibag Metadata Elements](#Multibag_Metadata_Elements)
 * [The Multibag Tag Directory](#The_Multibag_Tag_Directory)
-  * [The `group-members.txt` File](#The_group-members.txt_File)
-  * [The `group-directory.txt` File](#The_group-directory.txt_File)
+  * [The `member-bags.tsv` File](#The_member-bags.tsv_File)
+  * [The `file-lookup.tsv` File](#The_file-lookup.tsv_File)
 * [Multibag Aggregation Updates](#Multibag_Aggregation_Updates)
 * [Combining Multibags Into a Single Bag](#Combining_Multibags_Into_a_Single_Bag)
+* [Specification Changes](#Changes)
 
 <a name="Overview"></a>
 ## Overview
@@ -22,6 +24,7 @@ A bag that is compliant with the Multibag profile supports the following:
    * the standard BagIt structures
    * an additional set of Multibag fields in the `bag-info.txt` file
    * a multibag-specific tag directory containing tag files specified by this document
+   * restrictions on bag and data payload filenames
 
 When the Multibag profile is used to handle large data aggregations, the individual files are distributed across two or more bags (referred to in this document as a _Multibag aggregation_).  This profile defines how the multiple bags can be recombined to create a single coherent bag containing the aggregation.  On the other hand, often an application will want to extract only one or a few files from the aggregation and, thus, would prefer to avoid retrieving, transmitting, and/or unpacking all of the bags in the aggregation.  To enable this, one of the bags is known as the _Head Bag_; it contains both a listing of all of the other bags in the Multibag aggregation as well as a file lookup list for locating individual files.  Thus, to retrieve a subset of the files within the aggregation, an application would first retrieve and unpack the Head Bag (which can be made to be quite small) to consult its lookup list, and then retrieve and open only the member bags that contain the desired files.  
 
@@ -46,7 +49,25 @@ When a Multibag aggregation is being created to capture a large file aggregation
 
 The multibag profile does not place any requirements on the names given to the bags in the multibag aggregation, nor does it specify how one determines a bag's membership in an aggregation without opening up and examining the Head Bag's metadata.  Further, this profile does not define a means for identifying the Head Bag of an aggregation without opening and examining bags.  Applications may apply bag naming conventions to accomplish this; however, the convention should take into account the mechansim for non-destructive updates (see section, [Multibag Aggregation Updates](#Multibag_Aggregation_Updates)).  
 
-Note that a bag can be part of multiple bag aggregations simultaneously.  Specifically, Multibag's mechanism for non-destructive updates leverages this feature.  A bag can only be the Head Bag for one Multibag aggregation.  
+Note that a bag can be part of multiple bag aggregations
+simultaneously.  Specifically, Multibag's mechanism for
+non-destructive updates leverages this feature.  A bag can only be the
+Head Bag for one Multibag aggregation.
+
+<a name="Bag_and_File_Name_Restrictions"></a>
+###
+
+_This section is normative._
+
+To facilitate a simple format for the Multibag tag files (see section,
+[The Multibag Tag Directory](#The_Multibag_Tag_Directory)) that is
+straight-forward to parse but yet supports file names with embedded
+spaces, this specification places the follow restrictions on both the
+names of the component bags and the files and directories that appear
+under `data` directory:
+
+* A name must not contain embedded TAB characters.
+* A name must not begin or end with any whitespace character
 
 <a name="Multibag_Metadata_Elements"></a>
 ## Multibag Metadata Elements
@@ -57,7 +78,7 @@ A bag compliant with the Multibag profile MUST contain a `bag-info.txt` file as 
 
 <dl>
    <dt> <code>Multibag-Version</code> </dt>
-   <dd> The version of the Multibag profile specification that the bag conforms to. The version described by this document is 0.2. </dd>
+   <dd> The version of the Multibag profile specification that the bag conforms to. The version described by this document is 0.3. </dd>
 
    <dt> <code>Multibag-Reference</code> </dt>
    <dd> A URL pointing to Multibag specification referred to in the <code>Mulibag-Version</code> element. </dd>
@@ -104,45 +125,80 @@ _This section is normative._
 
 A Multibag Head Bag MUST contain a special directory located outside of the `data` directory which is referred to as a _Multibag Tag Directory_.  The location of this directory is given as the value of the `Multibag-Tag-Directory` metadata element in the `bag-info.txt` file (see section, [Multibag Metadata Elements](#Multibag_Metadata_Elements)) as a file path relative to the bag's base directory; if the element is not given, the location of MUST be a directory directly within the bag's base directory called `multibag`.  
 
-The directory MUST contain two files called `group-members.txt` and `group-directory.txt`, respectively.  The directory may contain other files, but applications that support this profile can ignore them to properly interact with bags in the bag aggregation.  
+The directory MUST contain two files called `member-bags.tsv` and `file-lookup.tsv`, respectively.  The directory may contain other files, but applications that support this profile can ignore them to properly interact with bags in the bag aggregation.  
 
-<a name="The_group-members.txt_File"></a>
-### The `group-members.txt` File
+<a name="The_member-bags.tsv_File"></a>
+### The `member-bags.tsv` File
 
 _This section is normative._
 
-The purpose of the `group-members.txt` file is to allow applications to know which other bags belong to a Multibag aggregation by examining the aggregation's Head Bag.  It also allows the application to retrieve the other member bags from remote locations if they are so available.  
+The purpose of the `member-bags.tsv` file is to allow applications to know which other bags belong to a Multibag aggregation by examining the aggregation's Head Bag.  It also allows the application to retrieve the other member bags from remote locations if they are so available.  
 
-The `group-members.txt` is a text file that lists the names of the bags that make up the Multibag aggregation.  Each line of the file has the format:
+The `member-bags.tsv` is a text file that lists the names of the bags
+that make up the Multibag aggregation.  Each line of the file contains
+one or more TAB-delimited fields and has the format:
 
 ```
-BAGNAME [URL]
+BAGNAME[\tURL][\t...][\t# COMMENT]
 ```
 
-where BAGNAME is the name of the bag.  This name should match the name of the base directory; it should not matched a serialized form of the bag.  URL is a URL from which a serialized copy of the bag can be retrieved.  The URL field is optional.  
+where "\t" is a single TAB character.  The first field, BAGNAME,
+is the name of a bag that is part of the aggregation.  This name
+should match the name of the bag's base directory; it should not
+matched a serialized form of the bag.  The name may be followed by one
+or space characters (i.e. before a delimiting TAB character); these
+must not be considered part of the bagname.  
 
-The order that bags are listed in is significant to the mechanism for combining Multibag bags into a single bag, as described in section, [Combining Multibags Into a Single Bag](#Combining_Multibags_Into_a_Single_Bag).  The last bag named in the list MUST be the Head Bag for the aggregation.  
+The second field, if provided, is an absolute URL from which a serialized copy
+of the bag can be retrieved.  This document does not specify how one
+can deserialize the file stream into the named bag; however, providers
+should employ common conventions such as filename extensions
+(e.g. ".zip") or HTTP content-types (e.g. "application/zip") to
+indicate the necessary mechanism for recreating the member bag.  The
+URL field is optional; when it is not provided, applications must rely
+on other information not specified by this document for determining
+where and how to retrieve the member bag referred to by the name.
+
+Additional fields may appear after the URL field.  If additional
+fields are provided but a URL is not applicable or known, the second
+field must be an emtpy string (that is, two consecutive TAB characters
+will appear after the BAGNAME).  The form and meaning of the
+additional fields beyond the URL are not specified by this document,
+with except for the following:  a column that begins with a pound sign
+('#') and a space indicates the start of a human-readable comment, and
+all subsequent characters in that line can be considered part of
+that comment.  
+
+The order that bags are listed in the file is significant to the mechanism for combining Multibag bags into a single bag, as described in section, [Combining Multibags Into a Single Bag](#Combining_Multibags_Into_a_Single_Bag).  The last bag named in the list MUST be the Head Bag for the aggregation.  
 
 #### Example
 
 _This section is non-normative._
 
-<a name="The_group-directory.txt_File"></a>
-### The `group-directory.txt` File
+<a name="The_file-lookup.tsv_File"></a>
+### The `file-lookup.tsv` File
 
 _This section is normative._
 
-The purpose of the `group-directory.txt` file is to allow applications to locate individual files across all of the aggregation's bags without having to open and examine all of the bags; rather, an application need only open the HeadBag to discover a file's location.
+The purpose of the `file-lookup.tsv` file is to allow applications to locate individual files across all of the aggregation's bags without having to open and examine all of the bags; rather, an application need only open the HeadBag to discover a file's location.
 
-The `group-directory.txt` file is a text file that lists the names of files available in the union of all the bags that make up the Multibag aggregation with an indication of in which bag the file is stored.  Each line of the file has the format:
+The `file-lookup.tsv` file is a text file that lists the names of
+files available in the union of all the bags that make up the Multibag
+aggregation with an indication of in which bag the file is stored.
+Each line of the file contains two fields separated by a single TAB
+character; that is, each line has the format:
 
 ```
-FILEPATH BAGNAME
+FILEPATH\tBAGNAME
 ```
 
-where FILEPATH is the path to the file relative to the bag's base directory, and BAGNAME is the name of the bag in the aggregation that the file is located in.  
+where "\t" is a TAB character, FILEPATH is the path to the file
+relative to the bag's base directory, and BAGNAME is the name of the
+bag in the aggregation that the file is located in.  One or more space
+characters may appear before or after the TAB; these must not be
+considered part of the FILEPATH or the BAGNAME fields.  
 
-Creators of Multibag-compliant bags should include in the `group-directory.txt` lising all files that users might want easy access to--i.e. the ability to extract an individual file from its enclosing bag without having to potentially unserialize and search all of the bags in the aggregation.  All files under the `data` directories in all of the bags SHOULD be listed in the file.  Other metadata or tag files outside of the `data` directories MAY be listed as well.  
+Creators of Multibag-compliant bags should include in the `file-lookup.tsv` lising all files that users might want easy access to--i.e. the ability to extract an individual file from its enclosing bag without having to potentially unserialize and search all of the bags in the aggregation.  All files under the `data` directories in all of the bags SHOULD be listed in the file.  Other metadata or tag files outside of the `data` directories MAY be listed as well.  
 
 <a name="Multibag_Aggregation_Updates"></a>
 ## Multibag Aggregation Updates
@@ -153,9 +209,9 @@ This section describes how to update Multibag aggregation while retaining full a
 
 One of the new bags is designated as the Head Bag for the updated version of the aggregation; it MUST meet all of the requirements of a Head Bag.  It SHOULD include in its `bag-info.txt` file the `Multibag-Head-Deprecates` metadata element, identifying the Head Bag of the previous aggregation that it replaces.  The new Head Bag MAY also replicate the `Multibag-Head-Deprecates` metadata occurrences in the deprecated Head Bag so as to reference even earlier versions of the aggregation.   
 
-The `group-members.txt` file in the new Head Bag MUST list all of member bags of the previous aggregation that contain data that is to be part of the new aggregation.  The file is allowed to not include one, some, or all of the bags from the previous aggregation if none of their files should be included or that they would otherwise be replaced in the new aggregation.  The order of listing of the bags from the previous aggregation's `group-members.txt` file MUST be the preserved in the new one.  The new bags MUST be listed after the bags from the previous aggregation, and the new Head Bag MUST be listed last.  The order of the new bags (that are not Head Bags) must take into consideration the rules for [Combining Multibags Into a Single Bag](#Combining_Multibags_Into_a_Single_Bag).  
+The `member-bags.tsv` file in the new Head Bag MUST list all of member bags of the previous aggregation that contain data that is to be part of the new aggregation.  The file is allowed to not include one, some, or all of the bags from the previous aggregation if none of their files should be included or that they would otherwise be replaced in the new aggregation.  The order of listing of the bags from the previous aggregation's `member-bags.tsv` file MUST be the preserved in the new one.  The new bags MUST be listed after the bags from the previous aggregation, and the new Head Bag MUST be listed last.  The order of the new bags (that are not Head Bags) must take into consideration the rules for [Combining Multibags Into a Single Bag](#Combining_Multibags_Into_a_Single_Bag).  
 
-The `group-directory.txt` file in the new Head Bag SHOULD list all of the files from the previous Head Bag's `group-directory.txt` file.  Files that are not considered part of the new aggregation MAY be absent from this file; however, a file's absence should not be taken as an indication that the file has been deleted as part of the update.  
+The `file-lookup.tsv` file in the new Head Bag SHOULD list all of the files from the previous Head Bag's `file-lookup.tsv` file.  Files that are not considered part of the new aggregation MAY be absent from this file; however, a file's absence should not be taken as an indication that the file has been deleted as part of the update.  
 
 
 > Note that this version of the Multibag Profile does not address how to handle deletions of files in an update to an aggregation.  This is planned to be addressed in a future version.
@@ -166,12 +222,33 @@ The `group-directory.txt` file in the new Head Bag SHOULD list all of the files 
 
 _This section is normative._
 
-It must always be possible, in principle, to combine all of the bags in a Multibag aggregation into a single BagIt-compliant bag (barring storage and compute resource limitations) by following the process detailed in this section.  The `group-members.txt` file lists the member bags in an aggregation in the order which they must be combined.  
+It must always be possible, in principle, to combine all of the bags in a Multibag aggregation into a single BagIt-compliant bag (barring storage and compute resource limitations) by following the process detailed in this section.  The `member-bags.tsv` file lists the member bags in an aggregation in the order which they must be combined.  
 
 An application MUST be able to combine a Multibag aggregation into a single bag by following the these steps:
 
-   1 The application retrieves the aggregation's Head Bag and extracts the `group-members.txt` file.
+   1 The application retrieves the aggregation's Head Bag and extracts the `member-bags.tsv` file.
    1 The application retrieves the first bag listed in the file, unserializes it (if necessary), and copies it to a location in storage where the final single bag is to be assembled. The directory structure of the bag is retained in the copy.
    1 The application retrieves and unserializes (if necessary) each subsequent bag in the list, in order, and unpacks or copies its contents into the same storage location, retaining the bag's directory structure. In this process, updated versions of files MAY overwrite deprecated versions.
 
 Previous versions of a Multibag aggregation may be assembled into a single bag by consulting a Head Bag's `Multibag-Head-Deprecates` metadata (in its `bag-info.txt` file) and retrieving the Head Bag of the previous version that the element refers to; the application can then follow the above steps with the deprecated Head Bag.  
+
+<a name="Changes"></a>
+# Specification Changes
+
+The initial draft was part of a comprensive document that also
+described the NIST Preservation BagIt Profile (version 0.2).  The
+Multibag component was spun off to create its verison 0.2.  
+
+## Since 0.2
+
+   * `group-members.txt` and `group-directory.txt` were changed to
+     `member-bags.tsv` and `file-lookup.tsv`, respectively.
+     * Switching to TSV format was necessary because parsing these files
+       became ambiguous when the file paths or bag names contains
+       spaces (which is not disallowed by the core BagIt spec).  TSV
+       provides a means for unambiguous retrieval of names without 
+       custom parsing; however, tabs are disallowed as part of
+       filenames and bagnames.  
+     * The base names were changed as some reviewers found the names
+       not obvious as to their purpose.
+
