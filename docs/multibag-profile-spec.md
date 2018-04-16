@@ -55,7 +55,7 @@ non-destructive updates leverages this feature.  A bag can only be the
 Head Bag for one Multibag aggregation.
 
 <a name="Bag_and_File_Name_Restrictions"></a>
-###
+### Bag and File Name Restrictions
 
 _This section is normative._
 
@@ -251,4 +251,6 @@ Multibag component was spun off to create its verison 0.2.
        filenames and bagnames.  
      * The base names were changed as some reviewers found the names
        not obvious as to their purpose.
-
+   * The format change for the above mentioned tag files necessitated
+     adding restrictions on the names of the component bags and the
+     files that appear under the data directory.  
