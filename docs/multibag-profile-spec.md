@@ -228,7 +228,21 @@ An application MUST be able to combine a Multibag aggregation into a single bag 
 
    1. The application retrieves the aggregation's Head Bag and extracts the `member-bags.tsv` file.
    1. The application retrieves the first bag listed in the file, unserializes it (if necessary), and copies it to a location in storage where the final single bag is to be assembled. The directory structure of the bag is retained in the copy.
-   1. The application retrieves and unserializes (if necessary) each subsequent bag in the list, in order, and unpacks or copies its contents into the same storage location, retaining the bag's directory structure. In this process, updated versions of files MAY overwrite deprecated versions.
+   1. The application retrieves and unserializes (if necessary) each subsequent bag in the list, in order, and unpacks or copies its contents into the same storage location, retaining the bag's directory structure. In this process, updated versions of files MAY overwrite deprecated versions (with the exception of the BagIt-specific files, `bagit.txt`, `bag-info.txt`, and the manifests, which must be handled separately.
+   1. The special BagIt-specific files for the combined bag should be reconstituted according to the following rules:
+      <dl>
+          <dt> <code>bagit.txt</code> </dt>
+          <dd> .... </dd>
+          <dt> <code>bag-info.txt</code> </dt>
+          <dd> .... </dd>
+          <dt> <code>manifest-</code><i>alg</i><code>.txt</code>, <code>tagmanifest-</code><i>alg</i><code>.txt</code> </dt>
+          <dd> .... </dd>
+      </dl>
+      
+> **Editor's Note:**
+> Need to fill out the rules for step 4 above
+
+Other BagIt profiles may specify rules for reconstituting other tag files from versions in the member bags.  In the absence of such rules, applications should assume assume that versions in the member bags listed later should replace those listed earlier. 
 
 Previous versions of a Multibag aggregation may be assembled into a single bag by consulting a Head Bag's `Multibag-Head-Deprecates` metadata (in its `bag-info.txt` file) and retrieving the Head Bag of the previous version that the element refers to; the application can then follow the above steps with the deprecated Head Bag.  
 
@@ -254,3 +268,4 @@ Multibag component was spun off to create its verison 0.2.
    * The format change for the above mentioned tag files necessitated
      adding restrictions on the names of the component bags and the
      files that appear under the data directory.  
+   * The steps for [Combining Multibags Into a Single Bag](#Combining_Multibags_Into_a_Single_Bag) were expanded to explain how to create the final versions of the BagIt tag files.  *In progress*
