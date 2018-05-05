@@ -226,9 +226,9 @@ It must always be possible, in principle, to combine all of the bags in a Multib
 
 An application MUST be able to combine a Multibag aggregation into a single bag by following the these steps:
 
-   1 The application retrieves the aggregation's Head Bag and extracts the `member-bags.tsv` file.
-   1 The application retrieves the first bag listed in the file, unserializes it (if necessary), and copies it to a location in storage where the final single bag is to be assembled. The directory structure of the bag is retained in the copy.
-   1 The application retrieves and unserializes (if necessary) each subsequent bag in the list, in order, and unpacks or copies its contents into the same storage location, retaining the bag's directory structure. In this process, updated versions of files MAY overwrite deprecated versions.
+   1. The application retrieves the aggregation's Head Bag and extracts the `member-bags.tsv` file.
+   1. The application retrieves the first bag listed in the file, unserializes it (if necessary), and copies it to a location in storage where the final single bag is to be assembled. The directory structure of the bag is retained in the copy.
+   1. The application retrieves and unserializes (if necessary) each subsequent bag in the list, in order, and unpacks or copies its contents into the same storage location, retaining the bag's directory structure. In this process, updated versions of files MAY overwrite deprecated versions.
 
 Previous versions of a Multibag aggregation may be assembled into a single bag by consulting a Head Bag's `Multibag-Head-Deprecates` metadata (in its `bag-info.txt` file) and retrieving the Head Bag of the previous version that the element refers to; the application can then follow the above steps with the deprecated Head Bag.  
 
