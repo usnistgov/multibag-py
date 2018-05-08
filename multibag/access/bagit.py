@@ -280,7 +280,10 @@ class ReadOnlyBag(_bagit.Bag):
 
             manifest_filename = self._root.relpath(manifest_filename)
 
-            with open_text_file(manifest_filename, 'r', encoding=self.encoding) as manifest_file:
+            manifest_file = None
+            try:
+                manifest_file = open_text_file(manifest_filename, 'r', encoding=self.encoding)
+
                 if manifest_file.encoding.startswith('UTF'):
                     # We'll check the first character to see if it's a BOM:
                     if manifest_file.read(1) == UNICODE_BYTE_ORDER_MARK:
@@ -294,8 +297,12 @@ class ReadOnlyBag(_bagit.Bag):
                                              ' BagIt RFC'),
                                            manifest_file.name)
                     else:
-                        manifest_file.seek(0)  # Pretend the first read never happened
-
+                        # Pretend the first read never happened
+                        # manifest_file.seek(0)  
+                        # seek() may not be available, so instead close and reopen
+                        manifest_file.close()
+                        manifest_file = open_text_file(manifest_filename, 'r', encoding=self.encoding)
+                        
                 for line in manifest_file:
                     line = line.strip()
 
@@ -339,6 +346,11 @@ class ReadOnlyBag(_bagit.Bag):
                                              ' multiple times with conflicting values') % warning_ctx)
 
                     entry_hashes[alg] = entry_hash
+
+            finally:
+                if manifest_file:
+                    manifest_file.close()
+                    manifest_file = None
 
         self.normalized_manifest_names.update(
             (normalize_unicode(i), i) for i in self.entries.keys()

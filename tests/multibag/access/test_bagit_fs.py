@@ -16,6 +16,7 @@ logging.raiseExceptions = True
 datadir = os.path.join(os.path.abspath(os.path.dirname(__file__)), "data")
 
 import fs.osfs
+import fs.zipfs
 
 class TestPath(test.TestCase):
 
@@ -131,6 +132,38 @@ class TestReadonlyBagViaOSFS(test.TestCase):
         self.assertTrue(self.bag.is_valid())
         
 
+class TestReadonlyBagViaStrPath(test.TestCase):
+
+    def setUp(self):
+        self.root = os.path.join(datadir, "samplembag")
+        self.bag = bagit.ReadOnlyBag(self.root)
+
+    def test_properties(self):
+        self.assertEqual(self.bag.algs, ['sha256'])
+        self.assertEqual(self.bag.version, "0.97")
+        self.assertTrue(self.bag.has_oxum())
+
+    def test_validate(self):
+        self.assertTrue(self.bag.validate())
+        self.assertTrue(self.bag.is_valid())
+        
+
+class TestReadonlyBagViaZip(test.TestCase):
+
+    def setUp(self):
+        self.fs = fs.zipfs.ZipFS(os.path.join(datadir, "samplembag.zip"))
+        self.path = bagit.Path(self.fs, "samplembag", "samplembag.zip:samplembag/")
+        self.bag = bagit.ReadOnlyBag(self.path)
+
+    def test_properties(self):
+        self.assertEqual(self.bag.algs, ['sha256'])
+        self.assertEqual(self.bag.version, "0.97")
+        self.assertTrue(self.bag.has_oxum())
+
+    def test_validate(self):
+        self.assertTrue(self.bag.validate())
+        self.assertTrue(self.bag.is_valid())
+        
 
 
 
