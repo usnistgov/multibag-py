@@ -89,12 +89,47 @@ class TestPath(test.TestCase):
         self.assertEqual(str(subpath), "testdata:samplembag/data/trial3/")
         self.assertIn("trial3a.json", subpath.fs.listdir("."))
 
+        with self.assertRaises(fs.errors.DirectoryExpected):
+            self.path.subfspath("bagit.txt")
 
-class TestReadonlyBag(test.TestCase):
+
+class TestReadonlyBagViaOSFS(test.TestCase):
 
     def setUp(self):
-        self.root = os.path.join(datadir, "samplebag")
-        self.bag = bagit.ReadOnlyBag(self.root)
+        self.fs = fs.osfs.OSFS(datadir)
+        self.path = bagit.Path(self.fs, "samplembag")
+        self.bag = bagit.ReadOnlyBag(self.path)
+
+    def test_properties(self):
+        self.assertEqual(self.bag.algs, ['sha256'])
+        self.assertEqual(self.bag.version, "0.97")
+        self.assertTrue(self.bag.has_oxum())
+
+    def test_files(self):
+        self.assertEqual([f for f in self.bag.manifest_files()], ["manifest-sha256.txt"])
+        self.assertEqual([f for f in self.bag.tagmanifest_files()], [])
+        files = [f for f in self.bag.payload_files()]
+        expected = "data/trial1.json data/trial2.json data/trial3/trial3a.json".split()
+        for f in expected:
+            self.assertIn(f, files)
+        self.assertEqual(len(files), 3)
+        self.assertEqual(list(self.bag.missing_optional_tagfiles()), [])
+        files = [f for f in self.bag.fetch_entries()]
+        self.assertEqual(len(files), 3)
+        self.assertEqual(len(list(self.bag.files_to_be_fetched())), 3)
+
+    def test_compare(self):
+        self.assertEqual(self.bag.compare_manifests_with_fs(), ([], []))
+        self.assertEqual(self.bag.compare_fetch_with_fs(), [])
+
+    def test_no_save(self):
+        with self.assertRaises(bagit.BagError):
+            self.bag.save()
+
+    def test_validate(self):
+        self.assertTrue(self.bag.validate())
+        self.assertTrue(self.bag.is_valid())
+        
 
 
 

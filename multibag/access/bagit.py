@@ -38,7 +38,8 @@ class Path(object):
         return a Path instance that represents another path relative to
         this one.  This assumes that the current Path instance points to
         a directory; the relpath string then refers to a file or directory
-        relative to it.  
+        relative to it.  Note that relpath need not point to an existing 
+        object within the filesystem.
         """
         if not relpath:
             return Path(self.fs, self.path, self._pfx)
@@ -56,6 +57,8 @@ class Path(object):
         of the current path.  If reldir is None (default) or empty,
         a new Path instance with a new fs attribute wrapping the current 
         path (rather than a subdirectory)
+
+        :raises fs.errors.DirectoryExpected: if reldir is not a subdirectory
         """
         if reldir:
             path = fs.path.join(self.path, reldir)
@@ -139,7 +142,7 @@ class ReadOnlyBag(_bagit.Bag):
         self._name = os.path.basename(bagpath.path)
         self._root = bagpath.subfspath()
 
-        super(ReadonlyBag, self).__init__("/"+self._name)
+        super(ReadOnlyBag, self).__init__("/"+self._name)
 
     def __str__(self):
         return str(self._root)
