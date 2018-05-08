@@ -5,7 +5,7 @@ etc.).
 """
 from __future__ import absolute_import
 import os
-import fs.osfs
+import fs.osfs, fs.zipfs, fs.tarfs
 
 import bagit as _bagit
 from bagit import *    # import everything!
@@ -137,12 +137,15 @@ class ReadOnlyBag(_bagit.Bag):
             bagpath = bagpath.rstrip("/")
             parent = os.path.dirname(bagpath) or "."
             bagname = os.path.basename(bagpath)
-            bagpath = Path(fs.osfs.OSFS(parent), bagname, parent+"/")
+            bagpath = Path(fs.osfs.OSFS(parent), unicode(bagname), parent+"/")
                            
         self._name = os.path.basename(bagpath.path)
         self._root = bagpath.subfspath()
 
-        super(ReadOnlyBag, self).__init__("/"+self._name)
+        path = unicode("/"+self._name)
+        if path == "/":
+            path = "//" # super __init__ will strip trailing /
+        super(ReadOnlyBag, self).__init__(path)
 
     def __str__(self):
         return str(self._root)
@@ -152,7 +155,7 @@ class ReadOnlyBag(_bagit.Bag):
         # the required version and encoding.
         #
         # This overrides the one inherited from bagit.Bag
-        bagit_file = "bagit.txt"
+        bagit_file = unicode("bagit.txt")
         bagit_file_path = self._root.relpath(bagit_file)
 
         if not self._root.fs.isfile(bagit_file):
@@ -198,7 +201,7 @@ class ReadOnlyBag(_bagit.Bag):
         """
         iterate through the names of the manifest files.
         """
-        for filename in ["manifest-%s.txt" % a for a in CHECKSUM_ALGOS]:
+        for filename in [unicode("manifest-%s.txt" % a) for a in CHECKSUM_ALGOS]:
             if self._root.fs.isfile(filename):
                 yield filename
 
@@ -206,7 +209,7 @@ class ReadOnlyBag(_bagit.Bag):
         """
         iterate through the names of the tag-manifest files.
         """
-        for filename in ["tagmanifest-%s.txt" % a for a in CHECKSUM_ALGOS]:
+        for filename in [unicode("tagmanifest-%s.txt" % a) for a in CHECKSUM_ALGOS]:
             if self._root.fs.isfile(filename):
                 yield filename
 
@@ -528,4 +531,61 @@ def _calculate_file_hashes(full_path, f_hashers):
     return dict(
         (alg, h.hexdigest()) for alg, h in f_hashers.items()
     )
+
+_ext_fs_lookup = {
+    ".zip":      fs.zipfs.ZipFS,
+    ".tar":      fs.tarfs.TarFS,
+    ".tar.gz":   fs.tarfs.TarFS,
+    ".tar.bz2":  fs.tarfs.TarFS,
+    ".tgz":      fs.tarfs.TarFS
+}
+
+def open_bag(location):
+    """
+    A factory function for opening a bag; it returns
+    a ReadOnlyBag instance opened for a given bag object location.  
+    The location string is examined to determine the form of the bag 
+    (a directory or some serialized version on a storage device).  
+    """
+    if not location:
+        raise ValueError("open_bag: empty location string")
+    location = unicode(location)
+
+    fspath = None
+    if '://' in location:
+        # FIX: This option is potentially problematic: is it pointing to a (zip) file or a directory?
+        # this is an FS URI location string
+        name = location.split("/")[-1]
+        fspath = Path(fs.open_fs(location), "", location+':')
+
+    elif os.path.isdir(location):
+        # it's a unserialized bag on local disk
+        name = os.path.basename(location)
+        parent = os.path.dirname(location)
+        if not parent:
+            parent = "."
+        fspath = Path(fs.osfs.OSFS(parent), name, "bag:")
+
+    elif os.path.isfile(location):
+        # a serialized bag on local disk
+        for ext in _ext_fs_lookup.keys():
+            if location.endswith(ext):
+                label = os.path.basename(location)+':'
+                bfs = _ext_fs_lookup[ext](location)
+                name = None
+                for d in bfs.walk.dirs():
+                    if bfs.isfile("/".join([d, "bagit.txt"])):
+                        name = d
+                        break
+                if not name:
+                    raise BagError("File does not appear to contain a serialized Bag: "+location)
+                fspath = Path(bfs, name, label+name+'/')
+                break
+        if not fspath:
+            raise ValueError("open_bag: bag serialization not recognized for "+location)
+
+    if not fspath:
+        raise ValueError("open_bag: unsupported bag type/location: "+location)
+
+    return ReadOnlyBag(fspath)
 

@@ -165,7 +165,26 @@ class TestReadonlyBagViaZip(test.TestCase):
         self.assertTrue(self.bag.is_valid())
         
 
+class TestOpen(test.TestCase):
 
+    def test_filepath(self):
+        loc = os.path.join(datadir, "samplembag")
+        bag = bagit.open_bag(loc)
+        self.assertTrue(bag.has_oxum())
+
+    def test_zip(self):
+        loc = os.path.join(datadir, "samplembag.zip")
+        bag = bagit.open_bag(loc)
+        self.assertTrue(bag.has_oxum())
+
+
+    def test_url_osfs(self):
+        loc = "/".join(["osfs:/", datadir, "samplembag"])
+        bag = bagit.open_bag(loc)
+        self.assertTrue(bag.has_oxum())
+
+
+        
 
 
 
