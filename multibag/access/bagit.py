@@ -59,12 +59,12 @@ class Path(object):
         """
         if reldir:
             path = fs.path.join(self.path, reldir)
-            return Path(self.fs.opendir(path), "", self._pfx+path)
+            return Path(self.fs.opendir(path), "", self._pfx+path+'/')
         elif not self.path:
             return Path(self.fs, self.path, self._pfx)
         else:
             return Path(self.fs.opendir(unicode(self.path)), "",
-                        self._pfx+'/'+self.path.lstrip('/')+'/')
+                        self._pfx+self.path.lstrip('/')+'/')
 
     def exists(self):
         """
@@ -88,7 +88,7 @@ class Path(object):
         return "{0}{1}".format(self._pfx, self.path)
 
     def __repr__(self):
-        return "{0}:{1}".format(str(self.fs), self.path)
+        return "{0}:{1}".format(repr(self.fs), self.path)
 
 _open_text_file_strpath = _bagit.open_text_file
 
