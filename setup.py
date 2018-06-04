@@ -1,9 +1,6 @@
 import os, sys, subprocess, unittest
 from setuptools import setup
 
-import tests
-print(str(dir(tests)))
-
 setup(name='multibag',
       version='0.1',
       description="multibag: a Python-based reference implementation of the Multibag BagIt profile",

@@ -4,13 +4,18 @@ adapted to bags not stored in a vanilla directory (e.g. zip files, S3 storage,
 etc.).  
 """
 from __future__ import absolute_import
-import os
+import os, sys
 import fs.osfs, fs.zipfs, fs.tarfs
 
 import bagit as _bagit
 from bagit import *    # import everything!
 from bagit import _, _load_tag_file, _decode_filename
 from bagit import _make_tagmanifest_file   # needed by testing
+
+if sys.version_info[0] > 2:
+    _unicode = str
+else:
+    _unicode = unicode
 
 class Path(object):
     """
@@ -28,7 +33,7 @@ class Path(object):
                             include any desired delimiters
         """
         self.fs = filesys
-        self.path = unicode(path)
+        self.path = _unicode(path)
         if prefix is None:
             prefix = repr(filesys) + ":"
         self._pfx = prefix
@@ -66,7 +71,7 @@ class Path(object):
         elif not self.path:
             return Path(self.fs, self.path, self._pfx)
         else:
-            return Path(self.fs.opendir(unicode(self.path)), "",
+            return Path(self.fs.opendir(_unicode(self.path)), "",
                         self._pfx+self.path.lstrip('/')+'/')
 
     def exists(self):
@@ -137,12 +142,12 @@ class ReadOnlyBag(_bagit.Bag):
             bagpath = bagpath.rstrip("/")
             parent = os.path.dirname(bagpath) or "."
             bagname = os.path.basename(bagpath)
-            bagpath = Path(fs.osfs.OSFS(parent), unicode(bagname), parent+"/")
+            bagpath = Path(fs.osfs.OSFS(parent), _unicode(bagname), parent+"/")
                            
         self._name = os.path.basename(bagpath.path)
         self._root = bagpath.subfspath()
 
-        path = unicode("/"+self._name)
+        path = _unicode("/"+self._name)
         if path == "/":
             path = "//" # super __init__ will strip trailing /
         super(ReadOnlyBag, self).__init__(path)
@@ -155,7 +160,7 @@ class ReadOnlyBag(_bagit.Bag):
         # the required version and encoding.
         #
         # This overrides the one inherited from bagit.Bag
-        bagit_file = unicode("bagit.txt")
+        bagit_file = _unicode("bagit.txt")
         bagit_file_path = self._root.relpath(bagit_file)
 
         if not self._root.fs.isfile(bagit_file):
@@ -201,7 +206,7 @@ class ReadOnlyBag(_bagit.Bag):
         """
         iterate through the names of the manifest files.
         """
-        for filename in [unicode("manifest-%s.txt" % a) for a in CHECKSUM_ALGOS]:
+        for filename in [_unicode("manifest-%s.txt" % a) for a in CHECKSUM_ALGOS]:
             if self._root.fs.isfile(filename):
                 yield filename
 
@@ -209,7 +214,7 @@ class ReadOnlyBag(_bagit.Bag):
         """
         iterate through the names of the tag-manifest files.
         """
-        for filename in [unicode("tagmanifest-%s.txt" % a) for a in CHECKSUM_ALGOS]:
+        for filename in [_unicode("tagmanifest-%s.txt" % a) for a in CHECKSUM_ALGOS]:
             if self._root.fs.isfile(filename):
                 yield filename
 
@@ -447,7 +452,7 @@ class ReadOnlyBag(_bagit.Bag):
                 stored_hash = hashes[alg]
                 if stored_hash.lower() != computed_hash:
                     e = ChecksumMismatch(rel_path, alg, stored_hash.lower(), computed_hash)
-                    LOGGER.warning(force_unicode(e))
+                    LOGGER.warning(force__unicode(e))
                     errors.append(e)
 
         if errors:
@@ -502,7 +507,7 @@ def _calc_hashes(args):
         f_hashes = _calculate_file_hashes(full_path, f_hashers)
     except BagValidationError as e:
         f_hashes = dict(
-            (alg, force_unicode(e)) for alg in f_hashers.keys()
+            (alg, force__unicode(e)) for alg in f_hashers.keys()
         )
 
     return rel_path, f_hashes, hashes
@@ -525,7 +530,7 @@ def _calculate_file_hashes(full_path, f_hashers):
     except (OSError, IOError) as e:
         raise BagValidationError(_("Could not read %(filename)s: %(error)s") % {
             'filename': full_path,
-            'error': force_unicode(e),
+            'error': force__unicode(e),
         })
 
     return dict(
@@ -549,7 +554,7 @@ def open_bag(location):
     """
     if not location:
         raise ValueError("open_bag: empty location string")
-    location = unicode(location)
+    location = _unicode(location)
 
     fspath = None
     if '://' in location:
