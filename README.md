@@ -33,3 +33,57 @@ The draft specification for this Profile can be found in the [docs
 directory](docs).
 
 
+## About this Reference Implementation
+
+This repo provides a python reference implementation of the multibag
+profile.
+
+_This implementation is in progress.  Further information on how to
+use the library is forthcoming._
+
+### Package Prerequisites
+
+This package is dependent on the following Python packages:
+   * bagit (> 1.6.0)
+   * fs  (> 2.0.0)
+
+These can be installed using the `pip` tool:
+
+```
+  pip install -r requirements.txt
+```
+
+### Building or Installing the Package
+
+To build this package, use the included `setup.py` script:
+
+```
+  python setup.py build
+```
+
+This installs the compiled Python code into a subdirectory called
+`build`.  To install the package, use the `install` command:
+
+```
+  python setup.py install
+```
+
+Use the `--prefix` option to install the package in a specific
+location (see `setuptools` documentation for details).
+
+### Running the Unit Tests
+
+The unit tests can be executed via the included `setup.py` script:
+
+```
+  python setup.py test
+```
+
+## Acknowlegements
+
+This project gratefully acknowledges the Library of Congress and the
+developers who contributed to the
+[bagit-python package](https://github.com/LibraryOfCongress/bagit-python),
+made available into the public domain.  The multibag-py code borrows
+code from this library to extend its capabilities to reading
+serialized bags (via the `fs` package).  
