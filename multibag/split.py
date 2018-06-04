@@ -452,7 +452,7 @@ class SplitPlan(object):
             use = reversed(use)
         try:
             for m in use:
-                name = naming_iter.next()
+                name = next(naming_iter)
                 self._set_manifest_name(m, name)
         except StopIteration as ex:
             after = (name and (" (after %s)" % name)) or ""

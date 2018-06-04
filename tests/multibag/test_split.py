@@ -335,9 +335,11 @@ class TestSplitPlan(test.TestCase):
                 self.nxt = 0
             def __iter__(self):
                 return self
-            def next(self):
+            def __next__(self):
                 self.nxt += 1
                 return "mbag_"+str(self.nxt-1)
+            def next(self):
+                return self.__next__()
 
         manifest = {
            'contents': set("about.txt metadata/pod.json metadata/trial3".split()),
@@ -373,7 +375,7 @@ class TestSplitPlan(test.TestCase):
         self.plan._manifests.append(manifest2)
 
         iter = self.plan.apply_iter(self.tempdir)
-        mbag = iter.next()
+        mbag = next(iter)
         mbagdir = os.path.join(self.tempdir, "goob_1.bag")
         self.assertEqual(mbag, mbagdir)
         for member in manifest1['contents']:
@@ -387,7 +389,7 @@ class TestSplitPlan(test.TestCase):
         self.assertTrue(bag.validate())
         self.assertTrue(bag.is_valid())
 
-        mbag = iter.next()
+        mbag = next(iter)
         mbagdir = os.path.join(self.tempdir, "goob_2.bag")
         self.assertEqual(mbag, mbagdir)
         for member in manifest2['contents']:
