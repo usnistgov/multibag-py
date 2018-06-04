@@ -2,7 +2,7 @@ import os, sys, subprocess, unittest
 from setuptools import setup
 
 import tests
-print dir(tests)
+print(str(dir(tests)))
 
 setup(name='multibag',
       version='0.1',
