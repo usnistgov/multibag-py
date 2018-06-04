@@ -13,6 +13,9 @@ from multibag.access.bagit import Bag, ReadOnlyBag
 datadir = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                        "access", "data")
 
+def ishardlink(path):
+    return os.stat(path).st_nlink > 1
+
 class TestLocalDirProgenitorBag(test.TestCase):
 
     def setUp(self):
@@ -140,6 +143,66 @@ class TestLocalDirProgenitorBag(test.TestCase):
         finally:
             shutil.rmtree(tempdir)
 
+    def test_replicate(self):
+        self.bag.replicate_with_hardlink = False
+        tempdir = tempfile.mkdtemp()
+        try:
+            self.assertTrue(os.path.exists(os.path.join(self.bag._bagdir,
+                                                        "bagit.txt")))
+            self.assertFalse(os.path.exists(os.path.join(tempdir, "bagit.txt")))
+                                                         
+            self.bag.replicate("bagit.txt", tempdir)
+            self.assertTrue(os.path.exists(os.path.join(tempdir, "bagit.txt")))
+            self.assertFalse(ishardlink(os.path.join(tempdir, "bagit.txt")))
+
+        finally:
+            shutil.rmtree(tempdir)
+    
+    def test_replicate_withlink(self):
+        tempdir = tempfile.mkdtemp()
+        try:
+            self.bagdir = os.path.join(tempdir, "samplebag")
+            shutil.copytree(os.path.join(datadir, "samplembag"), self.bagdir)
+            os.mkdir(os.path.join(self.bagdir, "metadata", "trial3"))
+
+            self.bag = split.asProgenitor(Bag(self.bagdir))
+            self.bag.replicate_with_hardlink = True
+            self.assertTrue(os.path.exists(os.path.join(self.bag._bagdir,
+                                                        "bagit.txt")))
+            outdir = os.path.join(tempdir, "otherbag")
+            self.assertFalse(os.path.exists(os.path.join(outdir, "bagit.txt")))
+                                                         
+            self.bag.replicate("bagit.txt", outdir)
+            self.assertTrue(os.path.exists(os.path.join(outdir, "bagit.txt")))
+            self.assertTrue(ishardlink(os.path.join(outdir, "bagit.txt")))
+
+        finally:
+            shutil.rmtree(tempdir)
+    
+    def test_replicate_dir(self):
+        tempdir = tempfile.mkdtemp()
+        try:
+            self.bagdir = os.path.join(tempdir, "samplebag")
+            shutil.copytree(os.path.join(datadir, "samplembag"), self.bagdir)
+            path = os.path.join("metadata", "trial3")
+            srcpath = os.path.join(self.bagdir, path)
+            os.mkdir(srcpath)
+
+            self.bag = split.asProgenitor(Bag(self.bagdir))
+            self.bag.replicate_with_hardlink = True
+            self.assertTrue(os.path.exists(os.path.join(self.bag._bagdir, path)))
+            outdir = os.path.join(tempdir, "otherbag")
+            self.assertFalse(os.path.exists(os.path.join(outdir, path)))
+                                                         
+            self.bag.replicate(path, outdir)
+            self.assertTrue(os.path.exists(os.path.join(outdir, path)))
+            self.assertTrue(os.path.isdir(os.path.join(outdir, path)))
+
+        finally:
+            shutil.rmtree(tempdir)
+    
+
+
 class TestSplitPlan(test.TestCase):
 
     def setUp(self):
@@ -241,6 +304,29 @@ class TestSplitPlan(test.TestCase):
         missing = set(self.plan.missing())
         self.assertEqual(len(missing), 0)
 
+    def test_complete_plan(self):
+        willmiss = "data/trial1.json data/trial2.json data/trial3/trial3a.json"
+        willmiss = willmiss.split()
+        
+        manifest = {
+           'contents': set("about.txt metadata/pod.json metadata/trial3".split()),
+           'name': "goob_1.bag"
+        }
+        self.plan._manifests.append(manifest)
+        self.assertEqual(len(self.plan._manifests), 1)
+        missing = set(self.plan.missing())
+        for p in willmiss:
+            self.assertIn(p, missing)
+        self.assertEqual(len(missing), 3)
+
+        self.plan.complete_plan()
+        self.assertEqual(len(self.plan._manifests), 2)
+        for p in willmiss:
+            self.assertIn(p, self.plan._manifests[-1]["contents"])
+        self.assertEqual(len(self.plan._manifests[-1]["contents"]), 3)
+        missing = set(self.plan.missing())
+        self.assertEqual(len(missing), 0)
+
     def test_name_output_bags(self):
 
         class nameiter(object):
@@ -272,6 +358,48 @@ class TestSplitPlan(test.TestCase):
         self.plan.name_output_bags(ni, True)
         self.assertEqual(self.plan._manifests[0]['name'], "mbag_3")
         self.assertEqual(self.plan._manifests[1]['name'], "mbag_2")
+
+    def test_apply_iter(self):
+        manifest1 = {
+           'contents': set("about.txt metadata/pod.json metadata/trial3".split()),
+           'name': "goob_1.bag"
+        }
+        self.plan._manifests.append(manifest1)
+
+        manifest2 = {
+           'contents': set("data/trial1.json data/trial2.json data/trial3/trial3a.json".split()),
+           'name': "goob_2.bag"
+        }
+        self.plan._manifests.append(manifest2)
+
+        iter = self.plan.apply_iter(self.tempdir)
+        mbag = iter.next()
+        mbagdir = os.path.join(self.tempdir, "goob_1.bag")
+        self.assertEqual(mbag, mbagdir)
+        for member in manifest1['contents']:
+            self.assertTrue(os.path.exists(os.path.join(mbagdir, member)))
+        self.assertTrue(os.path.exists(os.path.join(mbagdir, "bagit.txt")))
+        self.assertTrue(os.path.exists(os.path.join(mbagdir, "bag-info.txt")))
+        self.assertTrue(os.path.exists(os.path.join(mbagdir,
+                                                    "manifest-sha256.txt")))
+
+        bag = Bag(mbagdir)
+        self.assertTrue(bag.validate())
+        self.assertTrue(bag.is_valid())
+
+        mbag = iter.next()
+        mbagdir = os.path.join(self.tempdir, "goob_2.bag")
+        self.assertEqual(mbag, mbagdir)
+        for member in manifest2['contents']:
+            self.assertTrue(os.path.exists(os.path.join(mbagdir, member)))
+        self.assertTrue(os.path.exists(os.path.join(mbagdir, "bagit.txt")))
+        self.assertTrue(os.path.exists(os.path.join(mbagdir, "bag-info.txt")))
+        self.assertTrue(os.path.exists(os.path.join(mbagdir,
+                                                    "manifest-sha256.txt")))
+
+        bag = Bag(mbagdir)
+        self.assertTrue(bag.validate())
+        self.assertTrue(bag.is_valid())
 
 
 if __name__ == '__main__':
