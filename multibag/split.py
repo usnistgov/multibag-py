@@ -391,7 +391,7 @@ class SplitPlan(object):
         will include all files from the source bag.  
         """
         try:
-            self.missing().next()
+            next(self.missing())
             return False
         except StopIteration:
             return True
