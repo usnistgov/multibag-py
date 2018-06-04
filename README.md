@@ -83,7 +83,7 @@ The unit tests can be executed via the included `setup.py` script:
 
 This project gratefully acknowledges the Library of Congress and the
 developers who contributed to the
-(bagit-python package)[https://github.com/LibraryOfCongress/bagit-python],
+[bagit-python package](https://github.com/LibraryOfCongress/bagit-python),
 made available into the public domain.  The multibag-py code borrows
 code from this library to extend its capabilities to reading
 serialized bags (via the `fs` package).  
