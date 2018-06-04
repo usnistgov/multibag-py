@@ -69,7 +69,7 @@ This installs the compiled Python code into a subdirectory called
 ```
 
 Use the `--prefix` option to install the package in a specific
-location (see `setuptools` documentation for details.
+location (see `setuptools` documentation for details).
 
 ### Running the Unit Tests
 
@@ -79,5 +79,11 @@ The unit tests can be executed via the included `setup.py` script:
   python setup.py test
 ```
 
+## Acknowlegements
 
-
+This project gratefully acknowledges the Library of Congress and the
+developers who contributed to the
+(bagit-python package)[https://github.com/LibraryOfCongress/bagit-python],
+made available into the public domain.  The multibag-py code borrows
+code from this library to extend its capabilities to reading
+serialized bags (via the `fs` package).  
