@@ -8,7 +8,7 @@ import tempfile, shutil
 import unittest as test
 
 import multibag.split as split
-from multibag.access.bagit import Bag, ReadOnlyBag
+from multibag.access.bagit import Bag, ReadOnlyBag, Path, open_bag
 
 datadir = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                        "access", "data")
@@ -201,6 +201,137 @@ class TestLocalDirProgenitorBag(test.TestCase):
         finally:
             shutil.rmtree(tempdir)
     
+class TestReadOnlyProgenitorBag(test.TestCase):
+
+    def setUp(self):
+        self.bagroot = os.path.join(datadir, "samplembag.zip")
+        self.bag = split.asProgenitor(open_bag(self.bagroot))
+
+    def test_ctor(self):
+        self.assertTrue(isinstance(self.bag, ReadOnlyBag))
+        self.assertTrue(isinstance(self.bag, split.ProgenitorMixin))
+        self.assertTrue(isinstance(self.bag._root, Path))
+
+    def test_exists(self):
+        self.assertTrue(self.bag.exists("bagit.txt"))
+        self.assertTrue(self.bag.exists("data/trial1.json"))
+        self.assertFalse(self.bag.exists("data/goober"))
+        self.assertFalse(self.bag.exists("data/trial3/goober"))
+
+    def test_isdir(self):
+        self.assertFalse(self.bag.isdir("bagit.txt"))
+        self.assertTrue(self.bag.isdir("data"))
+        self.assertFalse(self.bag.isdir("data/trial1.json"))
+        self.assertFalse(self.bag.isdir("data/goober"))
+        self.assertTrue(self.bag.isdir("data/trial3"))
+        self.assertFalse(self.bag.isdir("data/trial3/goober"))
+
+    def test_isfile(self):
+        self.assertTrue(self.bag.isfile("bagit.txt"))
+        self.assertFalse(self.bag.isfile("data"))
+        self.assertTrue(self.bag.isfile("data/trial1.json"))
+        self.assertFalse(self.bag.isfile("data/goober"))
+        self.assertFalse(self.bag.isfile("data/trial3"))
+        self.assertFalse(self.bag.isfile("data/trial3/goober"))
+
+    def test_bag(self):
+        # test that self.bag behaves like a bagit.Bag
+        # Note that this is a little different, as bagit.Bag will include the
+        # full path.  
+        self.assertEqual(self.bag.algs, ["sha256"])
+        self.assertEqual(list(self.bag.manifest_files()),["manifest-sha256.txt"])
+
+    def test_walk(self):
+        contents = list(self.bag.walk())
+
+        self.assertEqual(contents[0][0], "") # the bag's base dir
+        dirs = contents[0][1]
+        self.assertIn("data", dirs)
+        self.assertIn("multibag", dirs)
+        self.assertIn("metadata", dirs)
+        self.assertEqual(len(dirs), 3)
+        files = contents[0][2]
+        self.assertIn("bagit.txt", files)
+        self.assertIn("bag-info.txt", files)
+        self.assertIn("manifest-sha256.txt", files)
+        self.assertIn("fetch.txt", files)
+        self.assertIn("about.txt", files)
+        self.assertIn("preserv.log", files)
+        self.assertEqual(len(files), 6)
+
+        sub = [t for t in contents if t[0] == "data"]
+        self.assertEqual(len(sub), 1)
+        sub = sub[0]
+        dirs = sub[1]
+        self.assertIn("trial3", dirs)
+        self.assertEqual(len(dirs), 1)
+        files = sub[2]
+        self.assertIn("trial1.json", files)
+        self.assertIn("trial2.json", files)
+        self.assertEqual(len(files), 2)
+
+        sub = [t for t in contents if t[0] == "multibag"]
+        self.assertEqual(len(sub), 1)
+        sub = sub[0]
+        dirs = sub[1]
+        self.assertEqual(len(dirs), 0)
+        files = sub[2]
+        self.assertIn("member-bags.tsv", files)
+        self.assertIn("file-lookup.tsv", files)
+        self.assertEqual(len(files), 2)
+
+        sub = [t for t in contents if t[0] == "metadata"]
+        self.assertEqual(len(sub), 1)
+        sub = sub[0]
+        dirs = sub[1]
+        self.assertEqual(len(dirs), 3)
+        self.assertIn("trial1.json", dirs)
+        self.assertIn("trial2.json", dirs)
+        self.assertIn("trial3", dirs)
+        files = sub[2]
+        self.assertIn("pod.json", files)
+        self.assertIn("nerdm.json", files)
+        self.assertEqual(len(files), 2)
+
+        sub = [t for t in contents if t[0] == os.path.join("data","trial3")]
+        self.assertEqual(len(sub), 1)
+        sub = sub[0]
+        dirs = sub[1]
+        self.assertEqual(len(dirs), 0)
+        files = sub[2]
+        self.assertIn("trial3a.json", files)
+        self.assertEqual(len(files), 1)
+
+        self.assertEqual(len(contents), 9)
+
+    def test_nonstandard(self):
+        tempdir = tempfile.mkdtemp()
+
+        contents = list(self.bag.nonstandard())
+        self.assertIn("about.txt", contents)
+        self.assertIn(os.path.join("metadata","pod.json"), contents)
+        self.assertIn(os.path.join("data","trial1.json"), contents)
+        self.assertIn(os.path.join("data","trial2.json"), contents)
+        self.assertIn(os.path.join("data","trial3/trial3a.json"), contents)
+        self.assertIn(os.path.join("multibag","member-bags.tsv"), contents)
+        self.assertIn(os.path.join("multibag","file-lookup.tsv"), contents)
+        self.assertEqual(len(contents), 13)
+
+    def test_replicate(self):
+        tempdir = tempfile.mkdtemp()
+        try:
+            self.assertTrue(self.bag.exists("bagit.txt"))
+            self.assertFalse(os.path.exists(os.path.join(tempdir, "bagit.txt")))
+                                                         
+            self.bag.replicate("bagit.txt", tempdir)
+            self.assertTrue(os.path.exists(os.path.join(tempdir, "bagit.txt")))
+            self.assertFalse(ishardlink(os.path.join(tempdir, "bagit.txt")))
+
+        finally:
+            shutil.rmtree(tempdir)
+    
+
+        
 
 
 class TestSplitPlan(test.TestCase):

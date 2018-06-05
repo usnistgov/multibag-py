@@ -10,6 +10,9 @@ from copy import deepcopy
 from .access.bagit import Bag, ReadOnlyBag
 from bagit import _parse_tags
 
+from fs.copy import copy_file
+from fs import open_fs
+
 _bagsepre = re.compile(r'/')
 _ossepre = re.compile(os.sep)
 
@@ -329,6 +332,112 @@ class _LocalProgenitorBag(Bag, LocalDirProgenitor):
 
 # class ReadOnlyProgenitorBag(ReadOnlyBag, FSProgenitor):
 
+class ReadOnlyProgenitor(ProgenitorMixin):
+    """
+    An implementation of the ProgenitorMixin for a Bag that is accessible 
+    only via the ReadOnlyBag interface.  
+    """
+    is_readonly = True
+
+    def __init__(self):
+        super(ReadOnlyProgenitor, self).__init__()
+
+    def _get_bag_name(self):
+        return self._name
+
+    def exists(self, path):
+        """
+        return True if the given path exists in this bag.  
+        :param str path:  the path to test, given relative to the bag's base
+                          directory.  '/' must be used as the path delimiter.
+        """
+        if path is None:
+            return False
+        return self._root.relpath(path).exists()
+
+    def isdir(self, path):
+        """
+        return True if the given path exists as a subdirectory in the bag
+        :param path str:  the path to test, given relative to the bag's base
+                          directory.  '/' must be used as the path delimiter.
+        """
+        if path is None:
+            return False
+        return self._root.relpath(path).isdir()
+
+    def isfile(self, path):
+        """
+        return True if the given path exists as a file in the bag
+        :param str path:  the path to test, given relative to the bag's base
+                          directory.  '/' must be used as the path delimiter.
+        """
+        if path is None:
+            return False
+        return self._root.relpath(path).isfile()
+
+    def replicate(self, path, destdir, logger=None):
+        """
+        copy a file from the source bag to the same location in an output bag.
+
+        :param str path:  the path, relative to the source bag's root directory,
+                          to the file to be replicated.
+        :param str destdir:  the destination directory.  This is usually the 
+                          root directory of another bag.  
+        :param Logger logger: a logger instance to send messages to.
+        :raises ValueError:  if the given file path doesn't exist in the source
+                          bag.
+        """
+        if not self.exists(path):
+            raise ValueError("replicate: file/dir does not exist in this bag: " +
+                             path)
+
+        destfs = open_fs(destdir)
+        if self.isdir(path):
+    
+            if not destfs.isdir(path):
+                if logger:
+                    logger.info("Creating matching directory in output bag: "
+                                     +path)
+                destfs.makedirs(path, recreate=True)
+            return
+
+        parent = os.path.dirname(path)
+        if parent and not os.path.exists(parent):
+            if logger:
+                logger.debug("Creating output file's parent directory: " +
+                             parent)
+            destfs.makedirs(parent)
+
+        copy_file(self._root.fs, path, destfs, path)
+
+    def walk(self):
+        """
+        Walk the source bag contents returning the triplets returned by
+        os.path with two differences.  
+
+        The first difference is that the first element in the triplet,
+        the base directory, will be relative to the bag's base directory;
+        for files and directories directly below the base, the field will 
+        be an empty string.
+
+        The second difference is that the path separator will always be a 
+        forward slash ('/'), consistent with the BagIt standard.
+        """
+        witer = self._root.fs.walk.walk()
+        while True:
+            root, dirs, files = next(witer)
+            root = root.lstrip('/')
+            yield root, [d.name for d in dirs], [f.name for f in files]
+
+class _ReadOnlyProgenitorBag(ReadOnlyBag, ReadOnlyProgenitor):
+    """
+    A ReadOnlyBag representing a progenitor bag for a multibag aggregation
+
+    This class should not be instantiated directly; rather asProgenitor()
+    should be called.
+    """
+    pass
+    
 def asProgenitor(bag):
     """
     add the ProgenitorMixin interface to the given bag.  The input bag instance 
@@ -337,12 +446,18 @@ def asProgenitor(bag):
     if not isinstance(bag, Bag):
         raise ValueError("asProgenitor(): input not of type Bag: " + str(bag))
 
+    # already a progenitor; just return it
     if isinstance(bag, ProgenitorMixin):
         return bag
 
+    # input is a ReadOnlyBag, access via an fs instance (e.g. zip file, tar ball,
+    # ...).  Convert to _ReadOnlyProgenitorBag.
     if isinstance(bag, ReadOnlyBag):
-        raise NotImplemented()
+        bag.__class__ = _ReadOnlyProgenitorBag
+        ReadOnlyProgenitor.__init__(bag)
+        return bag
 
+    # input is a normal bag
     if not os.path.exists(os.path.join(bag.path, "bagit.txt")):
         raise ValueError("Unsupported Bag implementation: "+str(type(bag)))
 
