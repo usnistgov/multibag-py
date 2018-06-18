@@ -27,6 +27,11 @@ MBAG_INTERNAL_SENDER_DESC = \
 PMAN = "manifest"
 TMAN = "tagmanifest"
 
+if sys.version_info[0] > 2:
+    _unicode = str
+else:
+    _unicode = unicode
+
 class ProgenitorMixin(object):
     """
     a complete bag that can be split into set of multibag-compliant bags.
@@ -773,4 +778,240 @@ class SplitPlan(object):
             fd.write(path)
             fd.write('\n')
 
+class Splitter(object):
+    """
+    an abstract class for algorithms that can create a SplitPlan given a 
+    source bag.  
+    """
+    __metaclass__ = ABCMeta
+
+    def __init__(self):
+        """
+        initialize the common internal planner data
+        """
+        pass
+
+    @abstractmethod
+    def plan(self, bagpath):
+        """
+        Apply this splitter's strategy for spliting a source bag into multibags
+        and return the result as a SplitPlan instance.  
+
+        :param str bagpath:  the path to the the source bag's root directory
+        :return SplitPlan:   a plan that describes how the given bag should 
+                             be split into multibags.  
+        """
+        raise NotImplemented()
+
+    def split(self, bagpath, outdir, namebasis=None):
+        """
+        Split the given bag into multibags according to the strategy of this 
+        splitter.  
+
+        :param str bagpath:  the path to the the source bag's root directory
+        :param str outdir:   the path to a directory where the output multibags
+                             should be written
+        :param str|iter namebasis:  a guide for naming the output files.  If 
+                             a str, a default naming scheme is applied using 
+                             namebasis as a base name.  Otherwise, it is 
+                             a naming iterator; see SplitPlan.name_output_bags()
+                             for its requirements.
+        :return [str]:  a list of the names of the output bags.
+        """
+        plan = self.plan(bagpath)
+        if namebasis:
+            # update the output names
+            ni = namebasis
+            if isinstanceof(namebasis, (str, _unicode)):
+                ni = SimpleNamer(namebasis, plan.bag_count)
+
+            plan.name_output_bags(ni)
+
+        out = []
+        for mb in plan.apply_iter():
+            ## offer option to serialize
+
+            out.append(mb)
+
+        return out
+        
+
+class WellPackedSplitter(Splitter):
+    """
+    a SplitPlanner that sets a maximum size limit, tries to minimize the total 
+    number of bags (each under the size limit).
+    """
+
+    def __init__(self, maxsize=60000, targetsize=50000, forhead=None):
+        self.maxsz = maxsize
+        self.tsz = targetsize
+        if forhead is None:
+            forhead = []
+        self.forhead = list(forhead)
+
+    def plan(self, bagpath):
+        bag = ReadOnlyBag(bagpath)
+
+        # these files are sorted by size, biggest one first
+        finfos = self._sorted_files(bag)
+        
+        out = SplitPlan(bag)
+        self._apply_algorithm(finfos, out)
+        out.complete_plan()
+        return out
+
+    def _apply_algorithm(self, finfos, plan):
+        manf = self._new_manifest()
+
+        i = 0
+        while len(finfos) > 0:
+            if i >= len(finfos):
+                i = 0
+            newsz = manf['totalsize'] + finfos[i]['size']
+            if newsz > self.maxsz:
+                if manf['totalsize'] == 0:
+                    # this file by itself exceeds our maxsize; put it in
+                    # bag by itself.
+                    self._add_to_manifest(finfos, i, manf)
+                    i = 0
+                    out._manifests.append(manf)
+                    manf = self._new_manifest()
+                else:
+                    # find a smaller one
+                    i += 1
+            else:
+                self._add_to_manifest(finfos, i, manf)
+                if newsz > self.tsz:
+                    # exceeded our target size; start a new one
+                    i = 0
+                    out._manifests.append(manf)
+                    manf = self._new_manifest()
+        
+        return out
+
+    def _add_to_manifest(self, files, idx, manifest):
+        fi = files.pop(idx)
+        manifest['contents'].append(fi['name'])
+        manifest['totalsize'] += fi['size']
+
+    def _new_manifest(self):
+        # return an empty manifest
+        return {
+            'contents': [],
+            'totalsize': 0
+        }
+        
+    _special = [re.compile(r) for r in
+                       r"^/bagit.txt$ ^/bag-info.txt$ ^/fetch.txt$".split() +
+                       r"^/(tag)?manifest-(\w+).txt$".split()]
+    def _is_special(self, filename):
+        for r in self._special:
+            if r.match(filename):
+                return True
+        return False
+
+    @staticmethod
+    def _cmp_by_size(infoa, infob):
+        # we want sort to descend in size
+        out = cmp(infob['size'], infoa['size'])
+        if out != 0:
+            return out
+        return cmp(infoa['name'], infob['name'])
+
+    def _sorted_files(self, bag):
+        finfos = [f for f in bag._root.fs.walk.files()
+                    if not self._is_special(f['name']) and
+                       f['name'] not in self.forhead]
+        finfos.sort(self._cmp_by_size)
+        return finfos
+
+class NeighborlySplitter(WellPackedSplitter):
+    """
+    a Splitter that sets a maximum size limit, tries to minimize the total 
+    number of bags (each under the size limit), and tries to keep files close to
+    each other in the hierarchy in the same output bag.  
+    """
+
+    def _apply_algorithm(self, finfos, plan):
+        manf = self._new_manifest()
+
+        i = 0
+        while len(finfos) > 0:
+            for dirpath in self._dirpaths_for(finfos, i):
+
+                # fill the open manifest with files in the dirpath directory
+                i = self._select_from_dir(finfos, i, manf, dirpath)
+            
+                if i < 0:
+                    # the manifest is full; open a new one
+                    break
+            
+                if i >= len(finfos):
+                    # no more files in the current dirpath directory will fit 
+                    # in the manifest; start looking for files in the next nearby
+                    # directory
+                    i = 0
+                    continue
+                
+            # the manifest is full or there are no more files that will fit in
+            # this manifest.  
+            plan._manifests.append(manf)
+            manf = self._new_manifest()
+            i = 0
+
+                    
+        return plan
+
+    def _dirpath(self, path):
+        if path == '/':
+            return None
+        return path.rsplit('/', 1)[0] + '/'
+
+    def _dirpaths_for(self, finfos, ref):
+        refdir = self._dirpath(finfos[ref]['name'])
+
+        # sort directories
+        dirs = [self._dirpath(f['name']) for f in finfos]
+        dirs.sort()
+
+        # uniquify
+        if len(dirs) > 1:
+            for i in range(len(dirs)):
+                d = dirs.pop(0)
+                if d != dirs[0]:
+                    dirs.append(d)
+
+        # put descendent directories before anscestors
+        i = dirs.index(refdir)
+        return dirs[i:] + dirs[:i]
+
+    def _select_from_dir(self, finfos, i, manifest, dirpath):
+        if not dirpath.endswith('/'):
+            dirpath += '/'
+
+        while i < len(finfos):
+            if dirpath == self._dirpath(finfos[i]['name']):
+                
+                newsz = manifest['totalsize'] + finfos[i]['size']
+                if newsz > self.maxsz:
+                    if manifest['totalsize'] == 0:
+                        # this file by itself exceeds our maxsize; put it in
+                        # a bag by itself.
+                        self._add_to_manifest(finfos, i, manifest)
+                        return -1
+                    else:
+                        # find a smaller file to put in manifest
+                        i += 1
+
+                else:
+                    self._add_to_manifest(finfos, i, manifest)
+                    if newsz > self.tsz:
+                        # exceeded our target size; start a new one
+                        return -1
+            else:
+                i += 1
+                    
+        return i
+
+    
         

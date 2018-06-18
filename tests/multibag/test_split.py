@@ -535,5 +535,84 @@ class TestSplitPlan(test.TestCase):
         self.assertTrue(bag.is_valid())
 
 
+class TestNeighborlySplitter(test.TestCase):
+
+    files = {
+        "/a":   14,
+        "/b": 1598,
+        "/c":  350,
+        "/d":  350,
+        "/e/a":    860,
+        "/e/b":    860,
+        "/e/c":    860,
+        "/e/d/a":    1100,
+        "/e/d/b":      58,
+        "/e/d/c":      58,
+        "/e/d/d":      58,
+        "/e/d/3":      58,
+        "/f/a":    860,
+        "/f/b":    860,
+        "/f/c":    860,
+        "/f/d/a":    1100,
+        "/f/d/b":      58,
+        "/f/d/c":      58,
+        "/f/d/d":      58,
+        "/f/d/3":      58,
+        "/g": 0,
+        "/h": 10,
+        "/bagit.txt": 43,
+        "/fetch.txt":  0
+    }
+
+    def setUp(self):
+        self.bagdir = os.path.join(datadir, "samplembag")
+        self.spltr = split.NeighborlySplitter(2200, 2000)
+        self.info = self.mkinfo(self.files)
+
+    def mkinfo(self, files):
+        out = []
+        for f in files:
+            out.append({ "name": f, "size": files[f] })
+        return out
+
+    def test_is_special(self):
+        specials = [n for n in self.files.keys() if self.spltr._is_special(n)]
+        self.assertIn("/fetch.txt", specials)
+        self.assertIn("/bagit.txt", specials)
+        self.assertEqual(len(specials), 2)
+
+    def test_cmp_by_size(self):
+        self.info.sort(self.spltr._cmp_by_size)
+        sz = 0
+        for fi in reversed(self.info):
+            self.assertGreaterEqual(fi['size'], sz)
+            sz = fi['size']
+
+    def test_apply_algorithm(self):
+        self.info = [f for f in self.info
+                       if not self.spltr._is_special(f['name'])]
+        self.info.sort(self.spltr._cmp_by_size)
+        bag = ReadOnlyBag(self.bagdir)
+        plan = split.SplitPlan(bag)
+        self.spltr._apply_algorithm(self.info, plan)
+
+        self.assertGreater(len(plan._manifests), 0)
+        # self.assertEqual(len(plan._manifests), 1)
+
+        mf = plan._manifests[0]
+        self.assertIn("/b", mf['contents'])
+        self.assertIn("/c", mf['contents'])
+        self.assertIn("/a", mf['contents'])
+        self.assertIn("/g", mf['contents'])
+        self.assertIn("/h", mf['contents'])
+        self.assertIn("/e/d/3", mf['contents'])
+        self.assertEqual(len(mf['contents']), 6)
+        self.assertGreater(2200, mf['totalsize'])
+
+        for i in range(6):
+            self.assertGreater(2200, plan._manifests[i]['totalsize'])
+
+
+
 if __name__ == '__main__':
     test.main()
