@@ -566,22 +566,23 @@ class TestNeighborlySplitter(test.TestCase):
 
     def setUp(self):
         self.bagdir = os.path.join(datadir, "samplembag")
-        self.spltr = split.NeighborlySplitter(2200, 2000)
         self.info = self.mkinfo(self.files)
 
     def mkinfo(self, files):
         out = []
         for f in files:
-            out.append({ "name": f, "size": files[f] })
+            out.append({ "path": f, "size": files[f], "name": f.split('/')[-1] })
         return out
 
     def test_is_special(self):
+        self.spltr = split.NeighborlySplitter()
         specials = [n for n in self.files.keys() if self.spltr._is_special(n)]
         self.assertIn("/fetch.txt", specials)
         self.assertIn("/bagit.txt", specials)
         self.assertEqual(len(specials), 2)
 
     def test_cmp_by_size(self):
+        self.spltr = split.NeighborlySplitter()
         self.info.sort(self.spltr._cmp_by_size)
         sz = 0
         for fi in reversed(self.info):
@@ -589,8 +590,9 @@ class TestNeighborlySplitter(test.TestCase):
             sz = fi['size']
 
     def test_apply_algorithm(self):
+        self.spltr = split.NeighborlySplitter(2200, 2000)
         self.info = [f for f in self.info
-                       if not self.spltr._is_special(f['name'])]
+                       if not self.spltr._is_special(f['path'])]
         self.info.sort(self.spltr._cmp_by_size)
         bag = ReadOnlyBag(self.bagdir)
         plan = split.SplitPlan(bag)
@@ -600,17 +602,136 @@ class TestNeighborlySplitter(test.TestCase):
         # self.assertEqual(len(plan._manifests), 1)
 
         mf = plan._manifests[0]
-        self.assertIn("/b", mf['contents'])
-        self.assertIn("/c", mf['contents'])
-        self.assertIn("/a", mf['contents'])
-        self.assertIn("/g", mf['contents'])
-        self.assertIn("/h", mf['contents'])
-        self.assertIn("/e/d/3", mf['contents'])
+        self.assertIn("b", mf['contents'])
+        self.assertIn("c", mf['contents'])
+        self.assertIn("a", mf['contents'])
+        self.assertIn("g", mf['contents'])
+        self.assertIn("h", mf['contents'])
+        # self.assertIn("e/d/3", mf['contents'])
         self.assertEqual(len(mf['contents']), 6)
         self.assertGreater(2200, mf['totalsize'])
 
         for i in range(6):
             self.assertGreater(2200, plan._manifests[i]['totalsize'])
+
+    def test_plan(self):
+        self.spltr = split.NeighborlySplitter(500)
+        plan = self.spltr.plan(self.bagdir)
+        self.assertTrue(plan.is_complete())
+        mfs = list(plan.manifests())
+        self.assertEqual(len(list(plan.manifests())), 3)
+        self.assertIn("metadata/pod.json",        mfs[0]['contents'])
+        self.assertEqual(len(mfs[0]['contents']), 1)
+        self.assertEqual("samplembag_1.mbag",      mfs[0]['name'])
+        
+        self.assertIn("about.txt", mfs[1]['contents'])
+        self.assertIn("data/trial1.json",         mfs[1]['contents'])
+        self.assertIn("multibag/member-bags.tsv", mfs[1]['contents'])
+        self.assertEqual(len(mfs[1]['contents']), 3)
+        self.assertEqual("samplembag_2.mbag",      mfs[1]['name'])
+        
+        self.assertIn("multibag/file-lookup.tsv", mfs[2]['contents'])
+        self.assertIn("data/trial2.json",         mfs[2]['contents'])
+        self.assertIn("data/trial3/trial3a.json", mfs[2]['contents'])
+        self.assertEqual(len(mfs[2]['contents']), 3)
+        self.assertEqual("samplembag_3.mbag",      mfs[2]['name'])
+
+    def test_split(self):
+        self.tempdir = tempfile.mkdtemp()
+        try:
+            self.bagdir = os.path.join(self.tempdir, "samplebag")
+            shutil.copytree(os.path.join(datadir, "samplembag"), self.bagdir)
+            shutil.rmtree(os.path.join(self.bagdir, "multibag"))
+            
+            self.spltr = split.NeighborlySplitter(500)
+            self.spltr.split(self.bagdir, self.tempdir)
+
+            mbags = [d for d in os.listdir(self.tempdir) if d.endswith(".mbag")]
+            self.assertIn("samplebag_1.mbag", mbags)
+            self.assertIn("samplebag_2.mbag", mbags)
+            self.assertIn("samplebag_3.mbag", mbags)
+            self.assertEqual(len(mbags), 3)
+
+            # TODO: run validator on output files!
+
+        finally:
+            shutil.rmtree(self.tempdir)
+            
+        
+
+class TestWellPackedSplitter(test.TestCase):
+
+    files = {
+        "/a":   14,
+        "/b": 1598,
+        "/c":  350,
+        "/d":  350,
+        "/e/a":    860,
+        "/e/b":    860,
+        "/e/c":    860,
+        "/e/d/a":    1100,
+        "/e/d/b":      58,
+        "/e/d/c":      58,
+        "/e/d/d":      58,
+        "/e/d/3":      58,
+        "/f/a":    860,
+        "/f/b":    860,
+        "/f/c":    860,
+        "/f/d/a":    1100,
+        "/f/d/b":      58,
+        "/f/d/c":      58,
+        "/f/d/d":      58,
+        "/f/d/3":      58,
+        "/g": 0,
+        "/h": 10,
+        "/bagit.txt": 43,
+        "/fetch.txt":  0
+    }
+
+    def mkinfo(self, files):
+        out = []
+        for f in files:
+            out.append({ "path": f, "size": files[f], "name": f.split('/')[-1] })
+        return out
+
+    def setUp(self):
+        self.bagdir = os.path.join(datadir, "samplembag")
+        self.spltr = split.WellPackedSplitter(2500)
+        self.info = self.mkinfo(self.files)
+
+    def test_apply_algorithm(self):
+        self.info = [f for f in self.info
+                       if not self.spltr._is_special(f['path'])]
+        self.info.sort(self.spltr._cmp_by_size)
+        bag = ReadOnlyBag(self.bagdir)
+        plan = split.SplitPlan(bag)
+        self.spltr._apply_algorithm(self.info, plan)
+
+        self.assertGreater(len(plan._manifests), 0)
+        # self.assertEqual(len(plan._manifests), 1)
+
+        mf = plan._manifests[0]
+        self.assertIn("b", mf['contents'])
+        self.assertIn("e/a", mf['contents'])
+        self.assertIn("a", mf['contents'])
+        self.assertIn("g", mf['contents'])
+        self.assertIn("h", mf['contents'])
+        self.assertEqual(len(mf['contents']), 5)
+        self.assertGreater(2500, mf['totalsize'])
+
+        for i in range(5):
+            self.assertGreater(2500, plan._manifests[i]['totalsize'])
+
+
+class TestSimpleNamer(test.TestCase):
+
+    def test_iter(self):
+        niter = split.SimpleNamer("goober")
+        self.assertEqual(niter.next(), "goober_1.mbag")
+        self.assertEqual(niter.next(), "goober_2.mbag")
+        self.assertEqual(niter.next(), "goober_3.mbag")
+        self.assertEqual(niter.next(), "goober_4.mbag")
+        self.assertEqual(niter.next(), "goober_5.mbag")
 
 
 

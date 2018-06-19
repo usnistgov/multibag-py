@@ -2,7 +2,7 @@
 Tools for splitting a single bag (a ProgenitorBag) into a set of 
 Multibag-compliant bags.
 """
-import os, re, shutil
+import os, sys, re, shutil
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
@@ -392,6 +392,7 @@ class ReadOnlyProgenitor(ProgenitorMixin):
         :raises ValueError:  if the given file path doesn't exist in the source
                           bag.
         """
+        path = _unicode(path)
         if not self.exists(path):
             raise ValueError("replicate: file/dir does not exist in this bag: " +
                              path)
@@ -407,7 +408,7 @@ class ReadOnlyProgenitor(ProgenitorMixin):
             return
 
         parent = os.path.dirname(path)
-        if parent and not os.path.exists(parent):
+        if parent and not destfs.exists(parent):
             if logger:
                 logger.debug("Creating output file's parent directory: " +
                              parent)
@@ -599,7 +600,8 @@ class SplitPlan(object):
                                           len(self._manifests)),
             "contents": list(self.missing())
         }
-        self._manifests.append(man)
+        if man['contents']:
+            self._manifests.append(man)
 
     def apply_iter(self, outdir, naming_iter=None, logger=None):
         """
@@ -792,16 +794,45 @@ class Splitter(object):
         pass
 
     @abstractmethod
-    def plan(self, bagpath):
+    def _create_plan(self, bagpath):
         """
-        Apply this splitter's strategy for spliting a source bag into multibags
-        and return the result as a SplitPlan instance.  
+        Create a SplitPlan for the given source bag and apply this splitter's 
+        strategy for spliting it into multibags.  Not intended for calling 
+        publicly, this function is called by plan() and is intended to contain
+        the logic behind the split strategy.  
 
         :param str bagpath:  the path to the the source bag's root directory
         :return SplitPlan:   a plan that describes how the given bag should 
                              be split into multibags.  
         """
         raise NotImplemented()
+
+    def plan(self, bagpath, namebasis=None):
+        """
+        Apply this splitter's strategy for spliting a source bag into multibags
+        and return the result as a SplitPlan instance.  
+
+        :param str bagpath:  the path to the the source bag's root directory
+        :param str|iter namebasis:  a guide for naming the output files.  If 
+                             a str, a default naming scheme is applied using 
+                             namebasis as a base name.  Otherwise, it is 
+                             a naming iterator; see SplitPlan.name_output_bags()
+                             for its requirements.
+        :return SplitPlan:   a plan that describes how the given bag should 
+                             be split into multibags.  
+        """
+        if not namebasis:
+            namebasis = os.path.splitext(os.path.basename(bagpath))[0]
+
+        out = self._create_plan(bagpath)
+
+        # update the output names
+        ni = namebasis
+        if isinstance(namebasis, (str, _unicode)):
+            ni = SimpleNamer(namebasis)
+        out.name_output_bags(ni)
+
+        return out
 
     def split(self, bagpath, outdir, namebasis=None):
         """
@@ -818,17 +849,10 @@ class Splitter(object):
                              for its requirements.
         :return [str]:  a list of the names of the output bags.
         """
-        plan = self.plan(bagpath)
-        if namebasis:
-            # update the output names
-            ni = namebasis
-            if isinstanceof(namebasis, (str, _unicode)):
-                ni = SimpleNamer(namebasis, plan.bag_count)
-
-            plan.name_output_bags(ni)
+        plan = self.plan(bagpath, namebasis)
 
         out = []
-        for mb in plan.apply_iter():
+        for mb in plan.apply_iter(outdir):
             ## offer option to serialize
 
             out.append(mb)
@@ -838,18 +862,38 @@ class Splitter(object):
 
 class WellPackedSplitter(Splitter):
     """
-    a SplitPlanner that sets a maximum size limit, tries to minimize the total 
+    a Splitter that sets a maximum size limit, tries to minimize the total 
     number of bags (each under the size limit).
     """
 
-    def __init__(self, maxsize=60000, targetsize=50000, forhead=None):
+    def __init__(self, maxsize=60000, targetsize=None, forhead=None):
+        """
+        Create the splitter based on the "well-packed" algorithm
+
+        :param int maxsize:  the maximum size of an output bag.  No bag will be 
+                             bigger than this limit except when a single file
+                             exceeds this limit (in this case,  this file will 
+                             be placed in its on multibag by itself).
+        :param int targetsize:  the preferred size of an output bag.  Bags will 
+                             be packed until they just exceed this fize by one
+                             file.  The total size will still be kept less than 
+                             maxsize. 
+        :param list[str] forhead:  a list of file paths that should be reserved 
+                             for the head bag.  
+        """
         self.maxsz = maxsize
+        if not targetsize:
+            targetsize = self.maxsz
         self.tsz = targetsize
         if forhead is None:
             forhead = []
         self.forhead = list(forhead)
+        for i in range(len(forhead)):
+            if not forhead[i].startswith('/'):
+                forhead[i] = '/'+forhead[i]
+                
 
-    def plan(self, bagpath):
+    def _create_plan(self, bagpath):
         bag = ReadOnlyBag(bagpath)
 
         # these files are sorted by size, biggest one first
@@ -858,6 +902,7 @@ class WellPackedSplitter(Splitter):
         out = SplitPlan(bag)
         self._apply_algorithm(finfos, out)
         out.complete_plan()
+
         return out
 
     def _apply_algorithm(self, finfos, plan):
@@ -866,7 +911,11 @@ class WellPackedSplitter(Splitter):
         i = 0
         while len(finfos) > 0:
             if i >= len(finfos):
+                # no more files can be found that will fit in this bag
+                plan._manifests.append(manf)
+                manf = self._new_manifest()
                 i = 0
+
             newsz = manf['totalsize'] + finfos[i]['size']
             if newsz > self.maxsz:
                 if manf['totalsize'] == 0:
@@ -874,7 +923,7 @@ class WellPackedSplitter(Splitter):
                     # bag by itself.
                     self._add_to_manifest(finfos, i, manf)
                     i = 0
-                    out._manifests.append(manf)
+                    plan._manifests.append(manf)
                     manf = self._new_manifest()
                 else:
                     # find a smaller one
@@ -884,14 +933,17 @@ class WellPackedSplitter(Splitter):
                 if newsz > self.tsz:
                     # exceeded our target size; start a new one
                     i = 0
-                    out._manifests.append(manf)
+                    plan._manifests.append(manf)
                     manf = self._new_manifest()
+
+        if len(manf['contents']) > 0:
+            plan._manifests.append(manf)
         
-        return out
+        return plan
 
     def _add_to_manifest(self, files, idx, manifest):
         fi = files.pop(idx)
-        manifest['contents'].append(fi['name'])
+        manifest['contents'].append(fi['path'][1:])
         manifest['totalsize'] += fi['size']
 
     def _new_manifest(self):
@@ -916,12 +968,14 @@ class WellPackedSplitter(Splitter):
         out = cmp(infob['size'], infoa['size'])
         if out != 0:
             return out
-        return cmp(infoa['name'], infob['name'])
+        return cmp(infoa['path'], infob['path'])
 
     def _sorted_files(self, bag):
-        finfos = [f for f in bag._root.fs.walk.files()
-                    if not self._is_special(f['name']) and
-                       f['name'] not in self.forhead]
+        finfos = [{"path": p, "size": f.size, "name": p.split('/')[-1]}
+                   for p,f in bag._root.fs.walk.info(namespaces=['details'])
+                       if not f.is_dir and not self._is_special(p)
+                                       and p not in self.forhead]
+                          
         finfos.sort(self._cmp_by_size)
         return finfos
 
@@ -968,18 +1022,17 @@ class NeighborlySplitter(WellPackedSplitter):
         return path.rsplit('/', 1)[0] + '/'
 
     def _dirpaths_for(self, finfos, ref):
-        refdir = self._dirpath(finfos[ref]['name'])
+        refdir = self._dirpath(finfos[ref]['path'])
 
         # sort directories
-        dirs = [self._dirpath(f['name']) for f in finfos]
+        dirs = [self._dirpath(f['path']) for f in finfos]
         dirs.sort()
 
         # uniquify
-        if len(dirs) > 1:
-            for i in range(len(dirs)):
-                d = dirs.pop(0)
-                if d != dirs[0]:
-                    dirs.append(d)
+        for i in range(len(dirs)-1):
+            d = dirs.pop(0)
+            if d != dirs[0]:
+                dirs.append(d)
 
         # put descendent directories before anscestors
         i = dirs.index(refdir)
@@ -990,7 +1043,7 @@ class NeighborlySplitter(WellPackedSplitter):
             dirpath += '/'
 
         while i < len(finfos):
-            if dirpath == self._dirpath(finfos[i]['name']):
+            if dirpath == self._dirpath(finfos[i]['path']):
                 
                 newsz = manifest['totalsize'] + finfos[i]['size']
                 if newsz > self.maxsz:
@@ -1013,5 +1066,23 @@ class NeighborlySplitter(WellPackedSplitter):
                     
         return i
 
-    
-        
+
+class SimpleNamer(object):
+    """
+    A simple naming iterator that creates names for output multibags made up 
+    of a given base name and a sequence number.
+    """
+    def __init__(self, base):
+        self.base = base
+        self.sn = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self.sn += 1
+        return "{0}_{1}.mbag".format(self.base, self.sn)
+
+    def next(self):
+        return self.__next__()
+
