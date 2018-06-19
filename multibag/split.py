@@ -476,6 +476,10 @@ class SplitPlan(object):
     """
     a description of how to distribute the payload and metadata files 
     from a progenitor bag across multiple output multibags.  
+
+    The plan is specific to a given source bag, and when it's complete, it 
+    can be applied to the source bag to create the output multibags via 
+    the `apply_iter()` function.  
     """
 
     def __init__(self, source):
@@ -784,6 +788,13 @@ class Splitter(object):
     """
     an abstract class for algorithms that can create a SplitPlan given a 
     source bag.  
+
+    A Splitter subclass captures a particular strategy for distributing the 
+    files found in a source bag into a set of output multibags.  To create a
+    Splitter implementation, one would subclass this abstract base class and 
+    over-ride the abstract `_create_plan()` function.  This function captures
+    the essential logic of the strategy and uses it to create SplitPlan tailored
+    to a given source bag.  
     """
     __metaclass__ = ABCMeta
 
