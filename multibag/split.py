@@ -977,10 +977,11 @@ class WellPackedSplitter(Splitter):
     @staticmethod
     def _cmp_by_size(infoa, infob):
         # we want sort to descend in size
-        out = cmp(infob['size'], infoa['size'])
+        out = infob['size'] - infoa['size']
         if out != 0:
             return out
-        return cmp(infoa['path'], infob['path'])
+        return ((infoa['path'] < infob['path']) and -1) or \
+               ((infoa['path'] > infob['path']) and +1) or 0
 
     def _sorted_files(self, bag):
         finfos = [{"path": p, "size": f.size, "name": p.split('/')[-1]}
