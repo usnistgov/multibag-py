@@ -6,6 +6,7 @@ import os, sys, re, shutil
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
+from functools import cmp_to_key
 
 from .access.bagit import Bag, ReadOnlyBag
 from bagit import _parse_tags
@@ -987,7 +988,7 @@ class WellPackedSplitter(Splitter):
                        if not f.is_dir and not self._is_special(p)
                                        and p not in self.forhead]
                           
-        finfos.sort(self._cmp_by_size)
+        finfos.sort(key=cmp_to_key(self._cmp_by_size))
         return finfos
 
 class NeighborlySplitter(WellPackedSplitter):
