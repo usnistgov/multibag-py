@@ -6,6 +6,7 @@ from __future__ import (absolute_import, division, print_function,
 import os, pdb, logging
 import tempfile, shutil
 import unittest as test
+from functools import cmp_to_key
 
 import multibag.split as split
 from multibag.access.bagit import Bag, ReadOnlyBag, Path, open_bag
@@ -583,7 +584,7 @@ class TestNeighborlySplitter(test.TestCase):
 
     def test_cmp_by_size(self):
         self.spltr = split.NeighborlySplitter()
-        self.info.sort(self.spltr._cmp_by_size)
+        self.info.sort(key=cmp_to_key(self.spltr._cmp_by_size))
         sz = 0
         for fi in reversed(self.info):
             self.assertGreaterEqual(fi['size'], sz)
@@ -593,7 +594,7 @@ class TestNeighborlySplitter(test.TestCase):
         self.spltr = split.NeighborlySplitter(2200, 2000)
         self.info = [f for f in self.info
                        if not self.spltr._is_special(f['path'])]
-        self.info.sort(self.spltr._cmp_by_size)
+        self.info.sort(key=cmp_to_key(self.spltr._cmp_by_size))
         bag = ReadOnlyBag(self.bagdir)
         plan = split.SplitPlan(bag)
         self.spltr._apply_algorithm(self.info, plan)
@@ -702,7 +703,7 @@ class TestWellPackedSplitter(test.TestCase):
     def test_apply_algorithm(self):
         self.info = [f for f in self.info
                        if not self.spltr._is_special(f['path'])]
-        self.info.sort(self.spltr._cmp_by_size)
+        self.info.sort(key=cmp_to_key(self.spltr._cmp_by_size))
         bag = ReadOnlyBag(self.bagdir)
         plan = split.SplitPlan(bag)
         self.spltr._apply_algorithm(self.info, plan)
