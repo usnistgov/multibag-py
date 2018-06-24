@@ -202,6 +202,14 @@ class ReadOnlyBag(_bagit.Bag):
 
         self._load_manifests()
 
+    def is_head_multibag(self):
+        """
+        return True if this bag is a designated as the head bag of a multibag
+        aggregation.  This implementation returns True if the 
+        'Multibag-Head-Version' is set.  
+        """
+        return self.info.has_key('Multibag-Head-Version')
+
     def manifest_files(self):
         """
         iterate through the names of the manifest files.
