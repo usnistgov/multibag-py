@@ -47,7 +47,16 @@ A Multibag aggregation is a set of one or more bags that are each compliant with
 
 When a Multibag aggregation is being created to capture a large file aggregation, each bag would normally contain a different subset of the files; in this case, typically, no two bags would contain file under the `data` directory with the same filepath.  How the `data` files are distributed amongst the bags in this use case is the choice of the creating application.  When a Multibag aggregation is supporting non-destructive updates (discussed in section, [Multibag Aggregation Updates](#Multibag_Aggregation_Updates)), files with the same path MAY appear in different bags.  These files are considered different versions of the same file.  When the bags are combined to create a single bag (according to the rules given in the section, [Combining Multibags Into a Single Bag](#Combining_Multibags_Into_a_Single_Bag)), only the latest version of the files is retained.  Regardless of the reason for there being multiple files with the same path in different member bags, all the files in the aggregation MUST be distributed such that applying the rules in section, [Combining Multibags Into a Single Bag](#Combining_Multibags_Into_a_Single_Bag), produces a compliant BagIt bag that properly represents the full file aggregation.  
 
-The multibag profile does not place any requirements on the names given to the bags in the multibag aggregation, nor does it specify how one determines a bag's membership in an aggregation without opening up and examining the Head Bag's metadata.  Further, this profile does not define a means for identifying the Head Bag of an aggregation without opening and examining bags.  Applications may apply bag naming conventions to accomplish this; however, the convention should take into account the mechansim for non-destructive updates (see section, [Multibag Aggregation Updates](#Multibag_Aggregation_Updates)).  
+The multibag profile does not specify how one determines a bag's
+membership in an aggregation without opening up and examining the Head
+Bag's metadata.  Further, this profile does not define a means for
+identifying the Head Bag of an aggregation without opening and
+examining bags.  Applications may apply bag naming conventions to
+accomplish this; however, the convention should take into account
+_(1)_ the restrictions on bag names (see next subsection, [Bag and
+File Name Restrictions](#Bag_and_File_Name_Restrictions)), and _(2)_
+the mechansim for non-destructive updates (see section, [Multibag
+Aggregation Updates](#Multibag_Aggregation_Updates)).   
 
 Note that a bag can be part of multiple bag aggregations
 simultaneously.  Specifically, Multibag's mechanism for
