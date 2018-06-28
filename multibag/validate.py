@@ -2,8 +2,13 @@
 This module provide a means for validating multibags.
 """
 from collections import Sequence, OrderedDict
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
 
 from .split import MBAG_VERSION as CURRENT_VERSION
+from .access.bagit import BagValidationError, BagError, open_bag
 
 ERROR = 1
 WARN  = 2
@@ -139,8 +144,8 @@ class ValidationIssue(object):
             comms = self._comm
             if not isinstance(comms, (list, tuple)):
                 comms = [comms]
-            out += "\n  "
-            out += "\n  ".join(comms)
+            out += "\n   "
+            out += "\n   ".join(comms)
         return out
 
     def __str__(self):
@@ -185,15 +190,20 @@ class ValidationResults(object):
     ALL   = ALL
     PROB  = PROB
     
-    def __init__(self, bagname, want=ALL):
+    def __init__(self, target, want=ALL):
         """
         initialize an empty set of results for a particular bag
 
-        :param bagname str:   the name of the bag being validated
-        :param want    int:   the desired types of tests to collect.  This 
-                              controls the result of ok().
+        :param str  target:   a name indicating the bag or bags that are the 
+                              target of these results
+        :param int    want:   the desired types of tests--one of ERROR, WARN, 
+                              REC, ALL, or PROB--to collect.  
+                              (ALL=ERROR+WARN+REC, PROB=ERROR+WARN) This 
+                              controls the result of ok():  if the types 
+                              indicated by this value all pass, then ok() 
+                              returns True.
         """
-        self.bagname = bagname
+        self.target = target
         self.want    = want
 
         self.results = {
@@ -206,7 +216,7 @@ class ValidationResults(object):
         """
         return a list of the validation tests that were applied of the
         requested types:
-        :param issuetype int:  an bit-wise and-ing of the desired issue types
+        :param int issuetype:  an bit-wise and-ing of the desired issue types
                                (default: ALL)
         """
         out = []
@@ -265,13 +275,14 @@ class ValidationResults(object):
         add an issue to this result.  The issue will be updated with its 
         type set to type and its status set to passed (True) or failed (False).
 
-        :param issue   ValidationIssue:  the issue to add
-        :param type    int:              the issue type code (ERROR, WARN, 
+        :param ValidationIssue issue:  the issue to add
+        :param int             type:   the issue type code (ERROR, WARN, 
                                          or REC)
-        :param passed  bool:             either True or False, indicating whether
+        :param bool            passed: either True or False, indicating whether
                                          the issue test passed or failed
-        :param comments str or list of str:  one or more comments to add to the 
+        :param comments:  one or more comments to add to the 
                                          issue instance.
+        :type comments: str or list of str
         """
         issue.type = type
         issue._passed = bool(passed)
@@ -283,9 +294,9 @@ class ValidationResults(object):
             for comm in comments:
                 issue.add_comment(comm)
         
-        issue = ValidationIssue(issue._prof, issue._pver, issue._lab,
-                                issue.type, issue._spec, issue._passed,
-                               (issue.comments and list(issue.comments)) or None)
+        issue = ValidationIssue(issue._lab, issue.type,issue._spec, issue._passed,
+                                (issue.comments and list(issue.comments)) or None,
+                                issue._pver)
         self.results[type].append(issue)
 
     def _err(self, issue, passed, comments=None):
@@ -315,4 +326,228 @@ class ValidationResults(object):
         """
         self._add_issue(issue, REC, passed, comments)
 
+class MultibagValidationError(BagValidationError):
+    """
+    An exception indicating that the target bag(s) are not compliant with 
+    the Multibag Bagit Profile in one or more ways.  
 
+    This class differs from the bagit.BagValidationError in that it carries 
+    along all of the result details as a ValidationResults instance ("results").
+    """
+    def __init__(self, results):
+        self.results = results
+
+        details = []
+        if results.count_failed() == 0:
+            # shouldn't happen
+            msg = "Unknown Multibag validation failure"
+        elif results.count_failed() == 1:
+            msg = results.failed()[0].summary
+            details = list(results.failed()[0].comments)
+        else:
+            msg = "{0} validation errors detected".format(results.count_failed())
+            details = [i.description for i in results.failed()]
+
+        super(MultibagValidationError, self).__init__(msg, details)
+
+    def __str__(self):
+        if not self.results or self.results.count_failed() < 2:
+            return super(MultibagValidationError, self).__str__()
+
+        out = self.message
+        if self.results.count_failed() > 3:
+            out += ", including"
+        out += ":\n\n"
+        failed = self.results.count_failed()[0:3]
+        for f in failed:
+            out += "\n\n * "+f.description
+        return out
+
+class Validator(object):
+    """
+    a base class for a class that will apply validation tests to some 
+    targets set at construction.
+
+    This base implementation runs no tests; validate() by default simple returns 
+    an empty ValidationResults object.  Subclasses should override validate() to 
+    run its tests and enter the results into a returned ValidationResults object.
+    """
+
+    def __init__(self, target):
+        """
+        initialize the validator
+
+        :param str validator:  a name indicating the target bag or bags being 
+                               validated.
+        """
+        self.target = target
+
+    def validate(self, want=PROB, results=None):
+        """
+        run the embeded tests, returning a list of errors.  If the returned
+        list is empty, then the bag is considered validated.  
+
+        :param want    int:  bit-wise and-ed codes indicating which types of 
+                             test results are desired.  A validator may (but 
+                             is not required to) use this value to skip 
+                             execution of certain tests.
+        :param results ValidationResults: a ValidationResults to add result
+                             information to; if provided, this instance will 
+                             be the one returned by this method.
+        :return ValidationResults:  the results of applying requested validation
+                             tests
+        """
+        out = results
+        if not out:
+            out = ValidationResults(self.target, want)
+        return out
+
+    def is_valid(self, want=PROB):
+        """
+        run the embedded tests and return True if all tests selected want
+        pass.  Return False otherwise.
+
+        :param want    int:  bit-wise and-ed codes indicating which types of 
+                             test results are desired.  A validator may (but 
+                             is not required to) use this value to skip 
+                             execution of certain tests.
+        """
+        results = self.validate(want)
+        return results.ok()
+
+    def ensure_valid(self, want=PROB):
+        """
+        run the (requested) embedded tests; if any of the requested tests fail,
+        raise a BagValidationError.
+
+        :param want    int:  bit-wise and-ed codes indicating which types of 
+                             test results are desired.  A validator may (but 
+                             is not required to) use this value to skip 
+                             execution of certain tests.
+
+        :raise BagValidationError:  if any of the requested tests fail.
+        """
+        results = self.validate(want)
+        if not results.ok():
+            raise MultibagValidationError(results)
+
+    def _issue(self, label, message):
+        """
+        return a new ValidationIssue instance that is part of this validator's
+        profile.  The issue type will be set to ERROR and its status, to passed.
+        """
+        return ValidationIssue(label, ERROR, message, True)
+        
+
+class BagValidator(Validator):
+    """
+    A validator that tests whether a given Bag (serialized or otherwise) complies
+    with the base BagIt specification.
+    """
+
+    def __init__(self, bagpath):
+        """
+        initialize the validator for the bag with a given path.  
+
+        :param str bagpath:  the target bag, either as a directory for an 
+                             unserialized bag or a file for a serialized one
+        """
+        super(BagValidator, self).__init__(bagpath)
+        self.bag = open_bag(bagpath)
+
+    def validate(self, want=PROB, results=None):
+        results = super(BagValidator, self).validate(want)
+
+        if (want & ERROR):
+            issue = ValidationIssue("2-Bag", ERROR,
+                                    "Bag must be compliant BagIt bag")
+            passed = True
+            comments = []
+            try:
+                self.bag.validate()
+            except BagValidationError as ex:
+                passed = False
+                comments = [ex.message] + ex.details
+            except BagError as ex:
+                passed = False
+                comments = [ex.message]
+
+            results._err(issue, passed, comments)
+
+        return results
+
+class HeadBagValidator(Validator):
+    """
+    A validator that tests whether a given Bag (serialized or otherwise) complies
+    with the Multibag requirements for serving as a head bag.
+    """
+
+    def __init__(self, bagpath):
+        """
+        initialize the validator for the bag with a given path.  
+
+        :param str bagpath:  the target bag, either as a directory for an 
+                             unserialized bag or a file for a serialized one
+        """
+        super(HeadBagValidator, self).__init__(bagpath)
+        self.bag = open_bag(bagpath)
+
+    def validate_version(self, want=ALL, results=None, version=CURRENT_VERSION):
+        """
+        ensure that the version information is correct
+        """
+        out = results
+        if not out:
+            out = ValidationResults(str(self.bag), want)
+
+        data = self.bag.info
+
+        t = self._issue("3-Version",
+              "bag-info.txt field must have required element: Multibag-Version")
+        out._err(t, "Multibag-Version" in data and bool(data["Multibag-Version"]))
+        if t.failed():
+            return out
+
+        t = self._issue("3-Version",
+                "bag-info.txt field, Multibag-Version, should only appear once")
+        out._warn(t, not isinstance(data["Multibag-Version"], (list, tuple)))
+
+        vers = data["Multibag-Version"]
+        if isinstance(data["Multibag-Version"], (list, tuple)):
+            version = data["Multibag-Version"][-1]
+
+        t = self._issue("3-Version-val",
+                        "Multibag-Version must be set to '{0}'".format(version))
+        out._err(t, vers == version)
+        
+        return out
+
+    def validate_reference(self, want=ALL, results=None, version=CURRENT_VERSION):
+        out = results
+        if not out:
+            out = ValidationResults(str(self.bag), want)
+
+        data = self.bag.info
+        
+        t = self._issue("3-Reference",
+                        "bag-info.txt should include field: Multibag-Reference")
+        out._rec(t, "Multibag-Reference" in data and data["Multibag-Reference"])
+        if t.failed():
+            return out
+
+        t = self._issue("3-Reference-val",
+                        "Multibag-Reference value must be an absolute URL " +
+                        "(not an empty value)")
+        url = data["Multibag-Reference"]
+        if isinstance(url, list):
+            url = url[-1]
+        out._err(t, bool(url))
+
+        t = self._issue("3-Reference-val",
+                        "Multibag-Reference value must be an absolute URL")
+        url = urlparse(url)
+        out._err(t, url.scheme and url.netloc)
+
+        return out
+
+        

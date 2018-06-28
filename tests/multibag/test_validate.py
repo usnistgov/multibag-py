@@ -86,12 +86,230 @@ class TestValidationIssue(test.TestCase):
         self.assertEqual(str(issue),
                     "ERROR: multibag 3.1 A1.1: Life must self-replicate (Little)")
         self.assertEqual(issue.description,
-          "ERROR: multibag 3.1 A1.1: Life must self-replicate\n  Little\n  green")
+        "ERROR: multibag 3.1 A1.1: Life must self-replicate\n   Little\n   green")
 
 class TestValidationResults(test.TestCase):
 
-    pass
+    def setUp(self):
+        self.res = val.ValidationResults("Life", val.PROB)
 
+    def test_ctor(self):
+        self.assertEqual(self.res.target, "Life")
+        self.assertEqual(self.res.want, 3)
+        self.assertTrue(self.res.want & val.ERROR)
+        self.assertTrue(self.res.want & val.WARN)
+        self.assertFalse(self.res.want & val.REC)
+        self.assertEqual(self.res.results[val.ERROR], [])
+        self.assertEqual(self.res.results[val.WARN], [])
+        self.assertEqual(self.res.results[val.REC], [])
+        
+    def test_applied(self):
+        self.res.results[val.ERROR] = "a b c".split()
+        self.res.results[val.WARN] = "d e".split()
+        self.res.results[val.REC] = "f".split()
+
+        self.assertEqual(self.res.applied(), "a b c d e f".split())
+        self.assertEqual(self.res.applied(val.ALL), "a b c d e f".split())
+        self.assertEqual(self.res.applied(val.ERROR), "a b c".split())
+        self.assertEqual(self.res.applied(val.WARN), "d e".split())
+        self.assertEqual(self.res.applied(val.REC), "f".split())
+        self.assertEqual(self.res.applied(val.PROB), "a b c d e".split())
+
+        self.assertEqual(self.res.count_applied(), 6)
+        self.assertEqual(self.res.count_applied(val.ALL), 6)
+        self.assertEqual(self.res.count_applied(val.ERROR), 3)
+        self.assertEqual(self.res.count_applied(val.WARN), 2)
+        self.assertEqual(self.res.count_applied(val.REC), 1)
+        self.assertEqual(self.res.count_applied(val.PROB), 5)
+
+    def test_passed_failed(self):
+        self.res.results[val.ERROR] = [
+            val.ValidationIssue("1", val.ERROR, passed=False),
+            val.ValidationIssue("2", val.ERROR, passed=True),
+            val.ValidationIssue("3", val.ERROR, passed=False)
+        ]
+        self.res.results[val.REC] = [
+            val.ValidationIssue("4", val.REC, passed=True),
+            val.ValidationIssue("5", val.REC, passed=False),
+            val.ValidationIssue("6", val.REC, passed=True)
+        ]
+
+        self.assertEqual([i.label for i in self.res.failed()],
+                         "1 3 5".split())
+        self.assertEqual(self.res.count_failed(), 3)
+        self.assertEqual([i.label for i in self.res.passed()],
+                         "2 4 6".split())
+        self.assertEqual(self.res.count_passed(), 3)
+
+        self.assertEqual([i.label for i in self.res.failed(val.ERROR)],
+                         "1 3".split())
+        self.assertEqual(self.res.count_failed(val.ERROR), 2)
+        self.assertEqual([i.label for i in self.res.passed(val.ERROR)],
+                         "2".split())
+        self.assertEqual(self.res.count_passed(val.ERROR), 1)
+
+        self.assertEqual([i.label for i in self.res.failed(val.REC)],
+                         "5".split())
+        self.assertEqual(self.res.count_failed(val.REC), 1)
+        self.assertEqual([i.label for i in self.res.passed(val.REC)],
+                         "4 6".split())
+        self.assertEqual(self.res.count_passed(val.REC), 2)
+
+        self.assertEqual([i.label for i in self.res.failed(val.WARN)],[])
+        self.assertEqual(self.res.count_failed(val.WARN), 0)
+        self.assertEqual([i.label for i in self.res.passed(val.WARN)],[])
+        self.assertEqual(self.res.count_passed(val.WARN), 0)
+
+        self.assertEqual([i.label for i in self.res.failed(val.PROB)],
+                         "1 3".split())
+        self.assertEqual(self.res.count_failed(val.PROB), 2)
+        self.assertEqual([i.label for i in self.res.passed(val.PROB)],
+                         "2".split())
+        self.assertEqual(self.res.count_passed(val.PROB), 1)
+
+
+    def test_ok(self):
+        self.res.results[val.ERROR] = [
+            val.ValidationIssue("1", val.ERROR, passed=True),
+            val.ValidationIssue("2", val.ERROR, passed=True),
+            val.ValidationIssue("3", val.ERROR, passed=True)
+        ]
+        self.res.results[val.REC] = [
+            val.ValidationIssue("4", val.REC, passed=True),
+            val.ValidationIssue("5", val.REC, passed=False),
+            val.ValidationIssue("6", val.REC, passed=True)
+        ]
+
+        self.assertTrue(self.res.ok())
+        self.res.want = val.ALL
+        self.assertFalse(self.res.ok())
+
+    def test_add_issue(self):
+        self.assertEqual(self.res.count_applied(), 0)
+
+        self.res._err(val.ValidationIssue("I must stay awake"), True, "Good job!")
+        self.assertEqual(self.res.count_applied(), 1)
+        self.assertEqual(self.res.count_passed(), 1)
+        self.assertEqual(self.res.count_applied(val.ERROR), 1)
+
+        self.res._warn(val.ValidationIssue("I must pay attention"), False,"Up here!")
+        self.assertEqual(self.res.count_applied(), 2)
+        self.assertEqual(self.res.count_passed(), 1)
+        self.assertEqual(self.res.count_failed(), 1)
+        self.assertEqual(self.res.count_applied(val.ERROR), 1)
+        self.assertEqual(self.res.count_applied(val.WARN), 1)
+
+        self.res._rec(val.ValidationIssue("I must be polite"), True,"Aw!")
+        self.assertEqual(self.res.count_applied(), 3)
+        self.assertEqual(self.res.count_passed(), 2)
+        self.assertEqual(self.res.count_failed(), 1)
+        self.assertEqual(self.res.count_applied(val.ERROR), 1)
+        self.assertEqual(self.res.count_applied(val.WARN), 1)
+        self.assertEqual(self.res.count_applied(val.REC), 1)
+
+
+class TestValidator(test.TestCase):
+
+    def setUp(self):
+        self.valid8r = val.Validator("Life")
+
+    def test_ctor(self):
+        self.assertEqual(self.valid8r.target, "Life")
+
+    def test_validate(self):
+        results = self.valid8r.validate()
+        self.assertEqual(results.count_applied(), 0)
+        self.assertTrue(results.ok())
+
+        results = val.ValidationResults("Life", val.PROB)
+        results.results[val.ERROR] = [
+            val.ValidationIssue("1", val.ERROR, passed=False)
+        ]
+        results = self.valid8r.validate(results=results)
+        self.assertEqual(results.count_applied(), 1)
+        self.assertTrue(not results.ok())
+
+    def test_is_valid(self):
+        self.assertTrue(self.valid8r.is_valid())
+
+    def test_ensure_valid(self):
+        self.valid8r.ensure_valid()
+
+
+class TestBagValidator(test.TestCase):
+
+    def test_validate(self):
+        bagdir = os.path.join(datadir, "samplembag")
+        valid8r = val.BagValidator(bagdir)
+
+        results = valid8r.validate(val.ALL)
+        self.assertEqual(results.count_applied(), 1)
+        self.assertEqual(results.count_failed(), 0)
+        self.assertTrue(results.ok())
+
+        self.assertTrue(valid8r.is_valid())
+        valid8r.ensure_valid()
+
+    def test_validate_zip(self):
+        bagdir = os.path.join(datadir, "samplembag.zip")
+        valid8r = val.BagValidator(bagdir)
+
+        results = valid8r.validate(val.ALL)
+        self.assertEqual(results.count_applied(), 1)
+        self.assertEqual(results.count_failed(), 0)
+        self.assertTrue(results.ok())
+
+        self.assertTrue(valid8r.is_valid())
+        valid8r.ensure_valid()
+
+    def test_invalidate(self):
+        tempdir = tempfile.mkdtemp()
+        try:
+            bagdir = os.path.join(tempdir, "samplebag")
+            shutil.copytree(os.path.join(datadir, "samplembag"), bagdir)
+            os.rename(os.path.join(bagdir, "data"), os.path.join(bagdir, "goob"))
+            valid8r = val.BagValidator(bagdir)
+
+            results = valid8r.validate(val.ALL)
+            self.assertEqual(results.count_applied(), 1)
+            self.assertEqual(results.count_failed(), 1)
+            self.assertTrue(not results.ok())
+
+            self.assertTrue(not valid8r.is_valid())
+            with self.assertRaises(val.MultibagValidationError):
+                valid8r.ensure_valid()
+
+        finally:
+            shutil.rmtree(tempdir)
+
+class TestHeadBagValidator(test.TestCase):
+
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+        self.bagdir = os.path.join(self.tempdir, "samplebag")
+        shutil.copytree(os.path.join(datadir, "samplembag"), self.bagdir)
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
+
+    def test_validate_version(self):
+        valid8r = val.HeadBagValidator(self.bagdir)
+        results = valid8r.validate_version()
+        self.assertEqual(results.count_applied(), 3)
+        self.assertTrue(results.ok())
+        
+        results = valid8r.validate_version(version="0.2")
+        self.assertEqual(results.count_applied(), 3)
+        self.assertTrue(not results.ok())
+        
+    def test_validate_reference(self):
+        valid8r = val.HeadBagValidator(self.bagdir)
+        results = valid8r.validate_reference()
+        self.assertEqual(results.count_applied(), 3)
+        self.assertTrue(results.ok())
+
+
+        
 
 if __name__ == '__main__':
     test.main()
