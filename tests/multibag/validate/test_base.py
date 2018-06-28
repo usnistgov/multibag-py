@@ -7,11 +7,11 @@ import os, pdb, json
 import tempfile, shutil
 import unittest as test
 
-import multibag.validate as val
+import multibag.validate.base as val
 from multibag.access.bagit import Bag, ReadOnlyBag, Path, open_bag
 
-datadir = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                       "access", "data")
+datadir=os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))),
+                     "access", "data")
 
 class TestValidationIssue(test.TestCase):
 

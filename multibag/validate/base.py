@@ -1,5 +1,5 @@
 """
-This module provide a means for validating multibags.
+This module provides base classes and infrastructure for multibag validation
 """
 from collections import Sequence, OrderedDict
 try:
@@ -7,8 +7,8 @@ try:
 except ImportError:
     from urlparse import urlparse
 
-from .split import MBAG_VERSION as CURRENT_VERSION
-from .access.bagit import BagValidationError, BagError, open_bag
+from ..split import MBAG_VERSION as CURRENT_VERSION
+from ..access.bagit import BagValidationError, BagError, open_bag
 
 ERROR = 1
 WARN  = 2
