@@ -571,6 +571,9 @@ def open_bag(location):
         name = location.split("/")[-1]
         fspath = Path(fs.open_fs(location), "", location+':')
 
+    elif not os.path.exists(location):
+        raise ValueError(location + ": path not found")
+
     elif os.path.isdir(location):
         # it's a unserialized bag on local disk
         name = os.path.basename(location)
