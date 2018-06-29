@@ -60,7 +60,32 @@ class TestMemberBagValidator(test.TestCase):
         self.assertEqual(results.failed()[0].label, "2.1a-name-TAB")
         self.assertTrue(not results.ok())
 
+    def test_validate_as_nonhead(self):
+        valid8r = bagv.MemberBagValidator(self.bagdir)
+        results = valid8r.validate_as_nonhead()
+        self.assertEqual(results.count_applied(), 0) # because its a head bag
+        self.assertTrue(results.ok())
 
+        del valid8r.bag.info['Multibag-Head-Version']
+        results = valid8r.validate_as_nonhead()
+        self.assertEqual(results.count_applied(), 3)
+        self.assertEqual(results.count_failed(), 2)
+        self.assertTrue(not results.ok())
+
+        valid8r.bag.info['Multibag-Head-Deprecates'] = "0.1"
+        results = valid8r.validate_as_nonhead()
+        self.assertEqual(results.count_applied(), 3)
+        self.assertEqual(results.count_failed(), 3)
+        self.assertTrue(not results.ok())
+
+        shutil.rmtree(os.path.join(self.bagdir, "multibag"))
+        valid8r = bagv.MemberBagValidator(self.bagdir)
+        del valid8r.bag.info['Multibag-Head-Version']
+        del valid8r.bag.info['Multibag-Tag-Directory']
+        results = valid8r.validate_as_nonhead()
+        self.assertEqual(results.count_applied(), 3)
+        self.assertTrue(results.ok())
+        
         
 
 if __name__ == '__main__':

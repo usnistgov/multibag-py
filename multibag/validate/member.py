@@ -94,12 +94,12 @@ class MemberBagValidator(Validator):
         t = out._issue("2-Head-Deprecates",
                        "bag-info.txt: Multibag-Head-Deprecates element "+
                        "should only be set for Head Bags")
-        out._warn(t, "Multibag-Head-Deprecates" in data)
+        out._warn(t, "Multibag-Head-Deprecates" not in self.bag.info)
 
         t = out._issue("2-Tag-Directory",
                        "bag-info.txt: Multibag-Tag-Directory element "+
                        "should only be set for Head Bags")
-        out._warn(t, "Multibag-Tag-Directory" in data)
+        out._warn(t, "Multibag-Tag-Directory" not in self.bag.info)
 
         mdir = self.bag.info.get("Multibag-Tag-Directory")
         if not mdir:
