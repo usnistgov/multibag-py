@@ -86,6 +86,16 @@ class TestMemberBagValidator(test.TestCase):
         self.assertEqual(results.count_applied(), 3)
         self.assertTrue(results.ok())
         
+    def test_validate(self):
+        valid8r = bagv.MemberBagValidator(self.bagdir)
+        results = valid8r.validate()
+        self.assertEqual(results.count_applied(), 2)
+        self.assertTrue(results.ok())
+
+    def test_is_valid(self):
+        valid8r = bagv.MemberBagValidator(self.bagdir)
+        self.assertTrue(valid8r.is_valid())
+
         
 
 if __name__ == '__main__':

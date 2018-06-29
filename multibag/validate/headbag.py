@@ -9,6 +9,7 @@ except ImportError:
 
 from .base import (Validator, ValidationIssue, ValidationResults, 
                    ALL, ERROR, WARN, REC, PROB, CURRENT_VERSION)
+from .bag import BagValidator
 from ..access.bagit import BagValidationError, BagError, open_bag
 
 class HeadBagValidator(Validator):
@@ -25,6 +26,7 @@ class HeadBagValidator(Validator):
                              unserialized bag or a file for a serialized one
         """
         super(HeadBagValidator, self).__init__(bagpath)
+        self.bagpath = bagpath
         self.bag = open_bag(bagpath)
 
     def validate(self, want=PROB, results=None):
@@ -45,6 +47,9 @@ class HeadBagValidator(Validator):
         out = results
         if not out:
             out = ValidationResults(self.target, want)
+
+        # validate against the base BagIt spec
+        BagValidator(self.bagpath).validate(want, out)
 
         version = self.bag.info.get("Multibag-Version")
         if version and isinstance(version, list):

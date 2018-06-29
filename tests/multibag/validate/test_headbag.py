@@ -230,7 +230,7 @@ class TestHeadBagValidator(test.TestCase):
     def test_validate(self):
         valid8r = bagv.HeadBagValidator(self.bagdir)
         results = valid8r.validate()
-        self.assertEqual(results.count_applied(), 30)
+        self.assertEqual(results.count_applied(), 31)
         self.assertTrue(results.ok())
 
     def test_is_valid(self):
