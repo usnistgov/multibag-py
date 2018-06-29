@@ -240,13 +240,14 @@ class ReadOnlyBag(_bagit.Bag):
         """
         return self._root.fs.isdir(path)
 
-    def open_text_file(self, path, mode='r', encoding='utf-8', errors='strict',
+    def open_text_file(self, path, encoding='utf-8', errors='strict',
                        buffering=-1):
         """
-        open the file with the given path and return a file object for it.
+        open the file with the given path for reading and return a file 
+        object for it.  This cannot be used to open for writing. 
         """
-        return open_text_file(self._root.relpath(path),
-                              mode, encoding, errors, buffering)
+        return open_text_file(self._root.relpath(path), 'r',
+                              encoding, errors, buffering)
 
     def manifest_files(self):
         """

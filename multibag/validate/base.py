@@ -378,8 +378,8 @@ class MultibagValidationError(BagValidationError):
         out = self.message
         if self.results.count_failed() > 3:
             out += ", including"
-        out += ":\n\n"
-        failed = self.results.count_failed()[0:3]
+        out += ":"
+        failed = self.results.failed()[0:3]
         for f in failed:
             out += "\n\n * "+f.description
         return out
