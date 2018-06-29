@@ -2,7 +2,7 @@
 Tools for splitting a single bag (a ProgenitorBag) into a set of 
 Multibag-compliant bags.
 """
-import os, sys, re, shutil
+import os, sys, re, shutil, codecs
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
@@ -64,7 +64,7 @@ class ProgenitorMixin(object):
 
     @abstractmethod
     def _get_bag_name(self):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def exists(self, path):
@@ -73,7 +73,7 @@ class ProgenitorMixin(object):
         :param path str:  the path to test, given relative to the bag's base
                           directory.  '/' must be used as the path delimiter.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def isdir(self, path):
@@ -82,7 +82,7 @@ class ProgenitorMixin(object):
         :param path str:  the path to test, given relative to the bag's base
                           directory.  '/' must be used as the path delimiter.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def isfile(self, path):
@@ -91,7 +91,7 @@ class ProgenitorMixin(object):
         :param path str:  the path to test, given relative to the bag's base
                           directory.  '/' must be used as the path delimiter.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def walk(self):
@@ -102,7 +102,7 @@ class ProgenitorMixin(object):
         for files and directories directly below the base, the field will 
         be an empty string.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def replicate(self, path, destdir):
@@ -114,20 +114,20 @@ class ProgenitorMixin(object):
         :param str destdir:  the destination directory.  This is usually the 
                           root directory of another bag.  
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def open_text_file(self, path, encoding='utf-8-sig'):
         """
-        return an open file object on the file from the source bag with the
-        given path.
+        return a open, read-only file object on the file from the source bag 
+        with the given path.
 
         :param str path:     the path to the file to open, relative to the source
                              bag's root directory.
         :param str encoding  a label indicating the encoding to expect in the 
                              file.  (Default: "utf-8-sig").
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def nonstandard(self):
         """
@@ -302,6 +302,19 @@ class LocalDirProgenitor(ProgenitorMixin):
                           ") into bag (" + destdir + "): " + str(ex)
                     self.log.exception(msg, exc_info=True)
         
+    def open_text_file(self, path, encoding='utf-8-sig'):
+        """
+        return a open, read-only file object on the file from the source bag 
+        with the given path.
+
+        :param str path:     the path to the file to open, relative to the source
+                             bag's root directory.
+        :param str encoding  a label indicating the encoding to expect in the 
+                             file.  (Default: "utf-8-sig").
+        """
+        path = self._canon_path(path)
+        return codecs.open(path, encoding=encoding);
+
         
     def walk(self):
         """
@@ -416,6 +429,18 @@ class ReadOnlyProgenitor(ProgenitorMixin):
             destfs.makedirs(parent)
 
         copy_file(self._root.fs, path, destfs, path)
+
+    def open_text_file(self, path, encoding='utf-8-sig'):
+        """
+        return a open, read-only file object on the file from the source bag 
+        with the given path.
+
+        :param str path:     the path to the file to open, relative to the source
+                             bag's root directory.
+        :param str encoding  a label indicating the encoding to expect in the 
+                             file.  (Default: "utf-8-sig").
+        """
+        return self._root.fs.open(path, encoding=encoding)
 
     def walk(self):
         """
@@ -647,14 +672,13 @@ class SplitPlan(object):
         filedest = OrderedDict()
         memberbags = []
         
-        last = self._manifests[-1]
         for m in self.manifests():
             bagname = m.get('name')
             if naming_iter:
                 try:
                     bagname = naming_iter.next()
                 except StopIteration as ex:
-                    if logger and m is not last:
+                    if logger and not m.get('ishead'):
                         logger.warn("naming iterator ran out of names before "+
                                     "output bags")
                     naming_iter = None
@@ -725,6 +749,9 @@ class SplitPlan(object):
             with open(outinfo, 'w') as fd:
                 _write_item(fd, 'Multibag-Version', MBAG_VERSION)
                 for name, vals in self.progenitor.info.items():
+                    if name.startswith('Multibag-'):
+                        continue
+                    
                     if not isinstance(vals, list):
                         vals = [vals]
                     if name == 'Internal-Sender-Identifier':
@@ -744,7 +771,7 @@ class SplitPlan(object):
                     _write_item(fd, name, vals)
 
                 _write_item(fd, "Multibag-Tag-Directory", "multibag")
-                if m is last:
+                if m.get('ishead'):
                     # this is the head bag!
                     _write_item(fd, "Multibag-Head-Version", self.head_version)
                     if self._deprecates:
@@ -756,7 +783,7 @@ class SplitPlan(object):
                             _write_item(fd, name, v)
 
             # create the multibag files
-            if m is last:
+            if m.get('ishead'):
                 mbagdir = os.path.join(bagdir, "multibag")
                 os.mkdir(mbagdir)
 
@@ -764,9 +791,14 @@ class SplitPlan(object):
                     for bag in memberbags:
                         fd.write(bag)
                         fd.write('\n')
-                with open(os.path.join(mbagdir, "file-lookup.tsv")) as fd:
+                with open(os.path.join(mbagdir, "file-lookup.tsv"), 'w') as fd:
                     for f in filedest:
                         fd.write("%s\t%s\n" % (f, filedest[f]))
+                with open(os.path.join(mbagdir, "aggregation-info.txt"), 'w') as fd:
+                    with self.progenitor.open_text_file("bag-info.txt") as ifd:
+                        for f in ifd:
+                            fd.write(f)
+                
 
             yield bagdir
 
@@ -817,7 +849,7 @@ class Splitter(object):
         :return SplitPlan:   a plan that describes how the given bag should 
                              be split into multibags.  
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def plan(self, bagpath, namebasis=None):
         """

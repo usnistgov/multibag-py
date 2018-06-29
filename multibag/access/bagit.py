@@ -135,7 +135,7 @@ class ReadOnlyBag(_bagit.Bag):
     the fs module.
     """
 
-    def __init__(self, bagpath):
+    def __init__(self, bagpath, name=None):
         if not bagpath:
             raise BagError(_("path to bag root directory not provided"))
         if not isinstance(bagpath, Path):
@@ -143,8 +143,10 @@ class ReadOnlyBag(_bagit.Bag):
             parent = os.path.dirname(bagpath) or "."
             bagname = os.path.basename(bagpath)
             bagpath = Path(fs.osfs.OSFS(parent), _unicode(bagname), parent+"/")
-                           
-        self._name = os.path.basename(bagpath.path)
+
+        if not name:
+            name = os.path.basename(bagpath.path)
+        self._name = name
         self._root = bagpath.subfspath()
 
         path = _unicode("/"+self._name)
@@ -201,6 +203,51 @@ class ReadOnlyBag(_bagit.Bag):
             self.info = _load_tag_file(info_file_path, encoding=self.encoding)
 
         self._load_manifests()
+
+    def is_head_multibag(self):
+        """
+        return True if this bag is a designated as the head bag of a multibag
+        aggregation.  This implementation returns True if the 
+        'Multibag-Head-Version' is set.  
+        """
+        return 'Multibag-Head-Version' in self.info
+
+    def exists(self, path):
+        """
+        return True if the given path exists within the bag relative to the 
+        bag's root directory.  
+
+        :param str path:  a relative path to a directory or file within the bag
+        """
+        return self._root.fs.exists(path)
+
+    def isfile(self, path):
+        """
+        return True if the given path exists as a file below the 
+        bag's root directory.  
+
+        :param str path:  a path to a file relative to the bag's root directory
+        """
+        return self._root.fs.isfile(path)
+
+    def isdir(self, path):
+        """
+        return True if the given path exists as a directory below the 
+        bag's root directory.  
+
+        :param str path:  a path to a directory relative to the bag's root 
+                          directory
+        """
+        return self._root.fs.isdir(path)
+
+    def open_text_file(self, path, encoding='utf-8', errors='strict',
+                       buffering=-1):
+        """
+        open the file with the given path for reading and return a file 
+        object for it.  This cannot be used to open for writing. 
+        """
+        return open_text_file(self._root.relpath(path), 'r',
+                              encoding, errors, buffering)
 
     def manifest_files(self):
         """
@@ -557,11 +604,15 @@ def open_bag(location):
     location = _unicode(location)
 
     fspath = None
+    name = None
     if '://' in location:
         # FIX: This option is potentially problematic: is it pointing to a (zip) file or a directory?
         # this is an FS URI location string
         name = location.split("/")[-1]
         fspath = Path(fs.open_fs(location), "", location+':')
+
+    elif not os.path.exists(location):
+        raise ValueError(location + ": path not found")
 
     elif os.path.isdir(location):
         # it's a unserialized bag on local disk
@@ -585,6 +636,7 @@ def open_bag(location):
                 if not name:
                     raise BagError("File does not appear to contain a serialized Bag: "+location)
                 fspath = Path(bfs, name, label+name+'/')
+                name = name.split("/")[-1]
                 break
         if not fspath:
             raise ValueError("open_bag: bag serialization not recognized for "+location)
@@ -592,5 +644,5 @@ def open_bag(location):
     if not fspath:
         raise ValueError("open_bag: unsupported bag type/location: "+location)
 
-    return ReadOnlyBag(fspath)
+    return ReadOnlyBag(fspath, name)
 

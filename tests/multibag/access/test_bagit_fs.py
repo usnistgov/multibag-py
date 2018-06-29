@@ -106,6 +106,9 @@ class TestReadonlyBagViaOSFS(test.TestCase):
         self.assertEqual(self.bag.version, "0.97")
         self.assertTrue(self.bag.has_oxum())
 
+    def test_is_head_multibag(self):
+        self.assertTrue(self.bag.is_head_multibag())
+
     def test_files(self):
         self.assertEqual([f for f in self.bag.manifest_files()], ["manifest-sha256.txt"])
         self.assertEqual([f for f in self.bag.tagmanifest_files()], [])

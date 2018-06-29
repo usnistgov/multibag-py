@@ -638,6 +638,8 @@ class TestNeighborlySplitter(test.TestCase):
         self.assertEqual("samplembag_3.mbag",      mfs[2]['name'])
 
     def test_split(self):
+        from multibag.validate import HeadBagValidator, MemberBagValidator
+        
         self.tempdir = tempfile.mkdtemp()
         try:
             self.bagdir = os.path.join(self.tempdir, "samplebag")
@@ -653,7 +655,13 @@ class TestNeighborlySplitter(test.TestCase):
             self.assertIn("samplebag_3.mbag", mbags)
             self.assertEqual(len(mbags), 3)
 
-            # TODO: run validator on output files!
+            # run validator on output files!
+            MemberBagValidator(os.path.join(self.tempdir,
+                                            "samplebag_1.mbag")).ensure_valid()
+            MemberBagValidator(os.path.join(self.tempdir,
+                                            "samplebag_2.mbag")).ensure_valid()
+            HeadBagValidator(os.path.join(self.tempdir,
+                                          "samplebag_3.mbag")).ensure_valid()
 
         finally:
             shutil.rmtree(self.tempdir)
