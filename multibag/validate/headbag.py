@@ -388,9 +388,9 @@ class HeadBagValidator(Validator):
         with self.bag.open_text_file(mbemf) as fd:
             i = 0
             for line in fd:
+                i += 1
                 if not line.strip():
                     continue
-                i += 1
                 parts = [f.strip() for f in line.strip().split('\t')]
                 last = parts[0]
                 if last == self.bag._name:
@@ -490,9 +490,9 @@ class HeadBagValidator(Validator):
         with self.bag.open_text_file(flirf) as fd:
             i = 0
             for line in fd:
+                i += 1
                 if not line.strip():
                     continue
-                i += 1
                 parts = [f.strip() for f in line.split()]
                 if parts[0] in paths:
                     replicated.append(i)
@@ -576,9 +576,9 @@ class HeadBagValidator(Validator):
         with self.bag.open_text_file(flirf) as fd:
             i = 0
             for line in fd:
+                i += 1
                 if not line.strip():
                     continue
-                i += 1
                 parts = [f.strip() for f in line.split('\t')]
                 if parts[0] in paths:
                     replicated.append(i)
