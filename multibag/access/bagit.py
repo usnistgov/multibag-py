@@ -210,7 +210,7 @@ class ReadOnlyBag(_bagit.Bag):
         aggregation.  This implementation returns True if the 
         'Multibag-Head-Version' is set.  
         """
-        return self.info.has_key('Multibag-Head-Version')
+        return 'Multibag-Head-Version' in self.info
 
     def exists(self, path):
         """
