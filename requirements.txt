@@ -1,0 +1,3 @@
+bagit>=1.6.0
+setuptools
+fs>=2.0.0
