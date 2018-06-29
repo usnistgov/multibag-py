@@ -67,17 +67,17 @@ class HeadBagValidator(Validator):
         """
         out = results
         if not out:
-            out = ValidationResults(str(self.bag), want)
+            out = ValidationResults(str(self.bag), want, version)
 
         data = self.bag.info
 
-        t = self._issue("3-Version",
+        t = out._issue("3-Version",
               "bag-info.txt field must have required element: Multibag-Version")
         out._err(t, "Multibag-Version" in data and bool(data["Multibag-Version"]))
         if t.failed():
             return out
 
-        t = self._issue("3-Version",
+        t = out._issue("3-Version",
                 "bag-info.txt field, Multibag-Version, should only appear once")
         out._warn(t, not isinstance(data["Multibag-Version"], (list, tuple)))
 
@@ -85,8 +85,8 @@ class HeadBagValidator(Validator):
         if isinstance(data["Multibag-Version"], (list, tuple)):
             version = data["Multibag-Version"][-1]
 
-        t = self._issue("3-Version-val",
-                        "Multibag-Version must be set to '{0}'".format(version))
+        t = out._issue("3-Version-val",
+                       "Multibag-Version must be set to '{0}'".format(version))
         out._err(t, vers == version)
         
         return out
@@ -94,26 +94,26 @@ class HeadBagValidator(Validator):
     def validate_reference(self, want=ALL, results=None, version=CURRENT_VERSION):
         out = results
         if not out:
-            out = ValidationResults(str(self.bag), want)
+            out = ValidationResults(str(self.bag), want, version)
 
         data = self.bag.info
         
-        t = self._issue("3-Reference",
-                        "bag-info.txt should include field: Multibag-Reference")
+        t = out._issue("3-Reference",
+                       "bag-info.txt should include field: Multibag-Reference")
         out._rec(t, "Multibag-Reference" in data and data["Multibag-Reference"])
         if t.failed():
             return out
 
-        t = self._issue("3-Reference-val",
-                        "Multibag-Reference value must be an absolute URL " +
-                        "(not an empty value)")
+        t = out._issue("3-Reference-val",
+                       "Multibag-Reference value must be an absolute URL " +
+                       "(not an empty value)")
         url = data["Multibag-Reference"]
         if isinstance(url, list):
             url = url[-1]
         out._err(t, bool(url))
 
-        t = self._issue("3-Reference-val",
-                        "Multibag-Reference value must be an absolute URL")
+        t = out._issue("3-Reference-val",
+                       "Multibag-Reference value must be an absolute URL")
         url = urlparse(url)
         out._err(t, url.scheme and url.netloc)
 
@@ -122,7 +122,7 @@ class HeadBagValidator(Validator):
     def validate_tag_directory(self, want=ALL, results=None, version=CURRENT_VERSION):
         out = results
         if not out:
-            out = ValidationResults(str(self.bag), want)
+            out = ValidationResults(str(self.bag), want, version)
 
         data = self.bag.info
         
@@ -131,26 +131,26 @@ class HeadBagValidator(Validator):
             if not isinstance(mdir, list):
                 mdir = [mdir]
 
-            t = self._issue("3-Tag-Directory",
-                            "bag-info.txt: Value for Multibag-Tag-Directory "+
-                            "should not be empty")
+            t = out._issue("3-Tag-Directory",
+                           "bag-info.txt: Value for Multibag-Tag-Directory "+
+                           "should not be empty")
             out._err(t, len(mdir) > 0 and mdir[-1])
             if t.failed():
                 return out
 
-            t = self._issue("3-Tag-Directory",
-                            "bag-info.txt: Multibag-Tag-Directory element "+
-                            "should appear no more than once")
+            t = out._issue("3-Tag-Directory",
+                           "bag-info.txt: Multibag-Tag-Directory element "+
+                           "should appear no more than once")
             out._err(t, len(mdir) == 1)
 
-            t = self._issue("3-Tag-Directory",
-                            "Multibag-Tag-Directory must exist as directory")
+            t = out._issue("3-Tag-Directory",
+                           "Multibag-Tag-Directory must exist as directory")
             out._err(t, self.bag.isdir(mdir[-1]))
 
         else:
-            t = self._issue("3-Tag-Directory",
-                            "Default Multibag-Tag-Directory, multibag, must "+
-                            "exist as a directory")
+            t = out._issue("3-Tag-Directory",
+                           "Default Multibag-Tag-Directory, multibag, must "+
+                           "exist as a directory")
             out._err(t, self.bag.isdir("multibag"))
 
         return out
@@ -158,7 +158,7 @@ class HeadBagValidator(Validator):
     def validate_head_version(self, want=ALL, results=None, version=CURRENT_VERSION):
         out = results
         if not out:
-            out = ValidationResults(str(self.bag), want)
+            out = ValidationResults(str(self.bag), want, version)
 
         data = self.bag.info
         if "Multibag-Head-Version" in data:
@@ -166,22 +166,22 @@ class HeadBagValidator(Validator):
             if not isinstance(value, list):
                 value = [value]
 
-            t = self._issue("3-Head-Version_nonempty",
-                            "bag-info.txt: Value for Multibag-Head-Version "+
-                            "should not be empty")
+            t = out._issue("3-Head-Version_nonempty",
+                           "bag-info.txt: Value for Multibag-Head-Version "+
+                           "should not be empty")
             out._warn(t, len(value) > 0 and value[-1])
             if len(value) == 0:
                 return out
 
-            t = self._issue("3-Head-Version_single",
-                            "bag-info.txt: Multibag-Head-Version element "+
-                            "should only appear once")
+            t = out._issue("3-Head-Version_single",
+                           "bag-info.txt: Multibag-Head-Version element "+
+                           "should only appear once")
             out._warn(t, len(value) == 1)
 
         else:
-            t = self._issue("3-Head-Version",
-                            "Head bag: bag-info.txt must have "+
-                            "Multibag-Head-Version element")
+            t = out._issue("3-Head-Version",
+                           "Head bag: bag-info.txt must have "+
+                           "Multibag-Head-Version element")
             out._err(t, False)
 
         return out
@@ -189,7 +189,7 @@ class HeadBagValidator(Validator):
     def validate_head_deprecates(self, want=ALL, results=None, version=CURRENT_VERSION):
         out = results
         if not out:
-            out = ValidationResults(str(self.bag), want)
+            out = ValidationResults(str(self.bag), want, version)
 
         data = self.bag.info
         if "Multibag-Head-Deprecates" not in data:
@@ -204,7 +204,7 @@ class HeadBagValidator(Validator):
         if not isinstance(values, list):
             values = [values]
 
-        t = self._issue("3-Head-Deprecates_notempty",
+        t = out._issue("3-Head-Deprecates_notempty",
            "bag-info.txt: Value for Multibag-Head-Deprecates should not be empty")
         out._warn(t, len(values) > 0 and values[0])
         if t.failed():
@@ -222,22 +222,22 @@ class HeadBagValidator(Validator):
             selfdeprecating = selfdeprecating or parts[0] == headver or \
                               (len(parts) > 1 and parts[1] == self.bag._name)
 
-        t = self._issue("3-Head-Deprecates_format",
-                        "bag-info.txt: Multibag-Head-Deprecates value must "+
-                        "match format: VERSION[, BAGNAME]")
+        t = out._issue("3-Head-Deprecates_format",
+                       "bag-info.txt: Multibag-Head-Deprecates value must "+
+                       "match format: VERSION[, BAGNAME]")
         comm = None
         if len(badfmt) > 0:
             comm = list(badfmt)
         out._err(t, len(badfmt) == 0, comm)
         
-        t = self._issue("3-Head-Deprecates_notempty",
-                        "bag-info.txt: Value for Multibag-Head-Deprecates "+
-                        "should not be empty")
+        t = out._issue("3-Head-Deprecates_notempty",
+                       "bag-info.txt: Value for Multibag-Head-Deprecates "+
+                       "should not be empty")
         out._warn(t, not empty)
 
-        t = self._issue("3-Head-Deprecates_notselfdep",
-                        "bag-info.txt: Multibag-Head-Deprecates should not "+
-                        "deprecate itself")
+        t = out._issue("3-Head-Deprecates_notselfdep",
+                       "bag-info.txt: Multibag-Head-Deprecates should not "+
+                       "deprecate itself")
         out._warn(t, not selfdeprecating)
 
         return out
@@ -245,19 +245,19 @@ class HeadBagValidator(Validator):
     def validate_baginfo_recs(self, want=ALL, results=None, version=CURRENT_VERSION):
         out = results
         if not out:
-            out = ValidationResults(str(self.bag), want)
+            out = ValidationResults(str(self.bag), want, version)
 
         data = self.bag.info
 
         for el in ["Internal-Sender-Identifier",
                    "Internal-Sender-Description", "Bag-Group-Identifier"]:
-            t = self._issue("3-2", "Recommed adding value for "+el+ 
-                            " into bag-info.txt file")
+            t = out._issue("3-2", "Recommed adding value for "+el+ 
+                           " into bag-info.txt file")
             out._rec(t, el in data and len(data[el]) > 0 and data[el][-1])
             if t.failed():
                 continue
-            t = self._issue("3-2", "bag-info.txt: "+el+" element should not "+
-                            "have empty values")
+            t = out._issue("3-2", "bag-info.txt: "+el+" element should not "+
+                           "have empty values")
             out._err(t, all(data[el]))
 
         return out
@@ -265,7 +265,7 @@ class HeadBagValidator(Validator):
     def validate_member_bags(self, want=ALL, results=None, version=CURRENT_VERSION):
         out = results
         if not out:
-            out = ValidationResults(str(self.bag), want)
+            out = ValidationResults(str(self.bag), want, version)
 
         ishead = self.bag.is_head_multibag()
         mdir = self.bag.info.get("Multibag-Tag-Directory")
@@ -278,8 +278,8 @@ class HeadBagValidator(Validator):
         assert mdir
         assert ishead
 
-        t = self._issue("3-Tag-Directory",
-                        "Multibag-Tag-Directory must exist as directory")
+        t = out._issue("3-Tag-Directory",
+                       "Multibag-Tag-Directory must exist as directory")
         out._err(t, self.bag.isdir(mdir))
         if t.failed():
             return out
@@ -293,8 +293,8 @@ class HeadBagValidator(Validator):
 
     def _validate_group_members(self, mdir, out, want=ALL):
         mbemf = "/".join([mdir, "group-members.txt"])
-        t = self._issue("4.0-1", "Multibag tag directory must contain a "+
-                        "group-members.txt file")
+        t = out._issue("4.0-1", "Multibag tag directory must contain a "+
+                       "group-members.txt file")
         out._err(t, self.bag.isfile(mbemf))
         if t.failed():
             return out
@@ -328,8 +328,8 @@ class HeadBagValidator(Validator):
                     badfmt.append(i)
                     
 
-        t = self._issue("4.1-1", "group-members.txt lines must match "+
-                        "format, BAGNAME[ URL]")
+        t = out._issue("4.1-1", "group-members.txt lines must match "+
+                       "format, BAGNAME[ URL]")
         comm = None
         if badfmt:
             s = (len(badfmt) > 1 and "s") or ""
@@ -339,8 +339,8 @@ class HeadBagValidator(Validator):
             comm = "line{0} {1}".format(s, ", ".join([str(b) for b in badfmt]))
         out._err(t, len(badfmt) == 0, comm)
 
-        t = self._issue("4.1-2", "group-members.txt: URL field must be an "+
-                        "absolute URL")
+        t = out._issue("4.1-2", "group-members.txt: URL field must be an "+
+                       "absolute URL")
         comm = None
         if badurl:
             s = (len(badurl) > 1 and "s") or ""
@@ -350,15 +350,15 @@ class HeadBagValidator(Validator):
             comm = "line{0} {1}".format(s, ", ".join([str(b) for b in badurl]))
         out._err(t, len(badurl) == 0, comm)
 
-        t = self._issue("4.1-3", "group-members.txt must list current bag name")
+        t = out._issue("4.1-3", "group-members.txt must list current bag name")
         out._err(t, foundme)
 
-        t = self._issue("4.1-4", "group-members.txt: Head bag must be "+
-                        "listed last")
+        t = out._issue("4.1-4", "group-members.txt: Head bag must be "+
+                       "listed last")
         out._err(t, last == self.bag._name)
 
-        t = self._issue("4.1-5", "group-members.txt: a bag name should only be "+
-                        "listed once")
+        t = out._issue("4.1-5", "group-members.txt: a bag name should only be "+
+                       "listed once")
         comm = None
         if len(replicated) > 0:
             s = (len(replicated) > 1 and "s") or ""
@@ -373,8 +373,8 @@ class HeadBagValidator(Validator):
     def _validate_member_bags_03(self, mdir, out, want=ALL):
 
         mbemf = "/".join([mdir, "member-bags.tsv"])
-        t = self._issue("4.0-1", "Multibag tag directory must contain a "+
-                        "member-bags.tsv file")
+        t = out._issue("4.0-1", "Multibag tag directory must contain a "+
+                       "member-bags.tsv file")
         out._err(t, self.bag.isfile(mbemf))
         if t.failed():
             return out
@@ -404,8 +404,8 @@ class HeadBagValidator(Validator):
                     if not url.scheme or url.netloc:
                         badurl.append(i)
 
-        t = self._issue("4.1-1", "member-bags.tsv lines must match "+
-                        "format, BAGNAME[\tURL][\t...]")
+        t = out._issue("4.1-1", "member-bags.tsv lines must match "+
+                       "format, BAGNAME[\tURL][\t...]")
         comm = None
         if badfmt:
             s = (len(badfmt) > 1 and "s") or ""
@@ -415,8 +415,8 @@ class HeadBagValidator(Validator):
             comm = "line{0} {1}".format(s, ", ".join([str(b) for b in badfmt]))
         out._err(t, len(badfmt) == 0, comm)
 
-        t = self._issue("4.1-2", "member-bags.tsv: URL field must be an "+
-                        "absolute URL")
+        t = out._issue("4.1-2", "member-bags.tsv: URL field must be an "+
+                       "absolute URL")
         comm = None
         if badurl:
             s = (len(badurl) > 1 and "s") or ""
@@ -426,15 +426,15 @@ class HeadBagValidator(Validator):
             comm = "line{0} {1}".format(s, ", ".join([str(b) for b in badurl]))
         out._err(t, len(badurl) == 0, comm)
 
-        t = self._issue("4.1-3", "member-bags.tsv must list current bag name")
+        t = out._issue("4.1-3", "member-bags.tsv must list current bag name")
         out._err(t, foundme)
 
-        t = self._issue("4.1-4", "member-bags.tsv: Head bag must be "+
-                        "listed last")
+        t = out._issue("4.1-4", "member-bags.tsv: Head bag must be "+
+                       "listed last")
         out._err(t, last == self.bag._name)
 
-        t = self._issue("4.1-5", "member-bags.tsv: a bag name should only be "+
-                        "listed once")
+        t = out._issue("4.1-5", "member-bags.tsv: a bag name should only be "+
+                       "listed once")
         comm = None
         if len(replicated) > 0:
             s = (len(replicated) > 1 and "s") or ""
@@ -449,7 +449,7 @@ class HeadBagValidator(Validator):
     def validate_file_lookup(self, want=ALL, results=None, version=CURRENT_VERSION):
         out = results
         if not out:
-            out = ValidationResults(str(self.bag), want)
+            out = ValidationResults(str(self.bag), want, version)
 
         ishead = self.bag.is_head_multibag()
         mdir = self.bag.info.get("Multibag-Tag-Directory")
@@ -462,8 +462,8 @@ class HeadBagValidator(Validator):
         assert mdir
         assert ishead
 
-        t = self._issue("3-Tag-Directory",
-                        "Multibag-Tag-Directory must exist as directory")
+        t = out._issue("3-Tag-Directory",
+                       "Multibag-Tag-Directory must exist as directory")
         out._err(t, self.bag.isdir(mdir))
         if t.failed():
             return out
@@ -477,8 +477,8 @@ class HeadBagValidator(Validator):
 
     def _validate_group_directory(self, mdir, out, want=ALL):
         flirf = "/".join([mdir, "group-directory.txt"])
-        t = self._issue("4.0-2", "Multibag tag directory must contain a "+
-                        "group-directory.txt file")
+        t = out._issue("4.0-2", "Multibag tag directory must contain a "+
+                       "group-directory.txt file")
         out._err(t, self.bag.isfile(flirf))
         if t.failed():
             return out
@@ -505,8 +505,8 @@ class HeadBagValidator(Validator):
                    not self.bag.isfile(parts[0]):
                     missing.append(i)
 
-        t = self._issue("4.2-1", "group-directory.txt lines must match format, "+
-                        "FILEPATH BAGNAME")
+        t = out._issue("4.2-1", "group-directory.txt lines must match format, "+
+                       "FILEPATH BAGNAME")
         comm = None
         if len(badfmt) > 0:
             s = (len(badfmt) > 1 and "s") or ""
@@ -516,8 +516,8 @@ class HeadBagValidator(Validator):
             comm= "line{0} {1}".format(s,", ".join([str(b) for b in badfmt]))
         out._err(t, len(badfmt) == 0, comm)
 
-        t = self._issue("4.2-2", "group-directory.txt: file path for current "+
-                        "bag must exist as a file")
+        t = out._issue("4.2-2", "group-directory.txt: file path for current "+
+                       "bag must exist as a file")
         comm = None
         if len(missing) > 0:
             s = (len(missing) > 1 and "s") or ""
@@ -527,8 +527,8 @@ class HeadBagValidator(Validator):
             comm= "line{0} {1}".format(s,", ".join([str(b) for b in missing]))
         out._err(t, len(missing) == 0, comm)
 
-        t = self._issue("4.2-3", "group-directory.txt: a file path must be "+
-                        "listed only once")
+        t = out._issue("4.2-3", "group-directory.txt: a file path must be "+
+                       "listed only once")
         comm = None
         if len(replicated) > 0:
             s = (len(replicated) > 1 and "s") or ""
@@ -549,8 +549,8 @@ class HeadBagValidator(Validator):
             if path not in paths:
                 missing.append(path)
         
-        t = self._issue("4.2-4", "all payload file should "+
-                        "be listed in the group-directory.txt file")
+        t = out._issue("4.2-4", "all payload file should "+
+                       "be listed in the group-directory.txt file")
         comm = None
         if len(missing) > 0:
             s = (len(missing) > 1 and "s") or ""
@@ -563,8 +563,8 @@ class HeadBagValidator(Validator):
 
     def _validate_file_lookup_03(self, mdir, out, want=ALL):
         flirf = "/".join([mdir, "file-lookup.tsv"])
-        t = self._issue("4.0-2", "Multibag tag directory must contain a "+
-                        "file-lookup.tsv file")
+        t = out._issue("4.0-2", "Multibag tag directory must contain a "+
+                       "file-lookup.tsv file")
         out._err(t, self.bag.isfile(flirf))
         if t.failed():
             return out
@@ -591,8 +591,8 @@ class HeadBagValidator(Validator):
                    not self.bag.isfile(parts[0]):
                     missing.append(i)
 
-        t = self._issue("4.2-1", "file-lookup.tsv lines must match format, "+
-                        "FILEPATH\\tBAGNAME")
+        t = out._issue("4.2-1", "file-lookup.tsv lines must match format, "+
+                       "FILEPATH\\tBAGNAME")
         comm = None
         if len(badfmt) > 0:
             s = (len(badfmt) > 1 and "s") or ""
@@ -602,8 +602,8 @@ class HeadBagValidator(Validator):
             comm= "line{0} {1}".format(s,", ".join([str(b) for b in badfmt]))
         out._err(t, len(badfmt) == 0, comm)
 
-        t = self._issue("4.2-2", "file-lookup.tsv: file path for current "+
-                        "bag must exist as a file")
+        t = out._issue("4.2-2", "file-lookup.tsv: file path for current "+
+                       "bag must exist as a file")
         comm = None
         if len(missing) > 0:
             s = (len(missing) > 1 and "s") or ""
@@ -613,8 +613,8 @@ class HeadBagValidator(Validator):
             comm= "line{0} {1}".format(s,", ".join([str(b) for b in missing]))
         out._err(t, len(missing) == 0, comm)
 
-        t = self._issue("4.2-3", "file-lookup.tsv: a file path must be "+
-                        "listed only once")
+        t = out._issue("4.2-3", "file-lookup.tsv: a file path must be "+
+                       "listed only once")
         comm = None
         if len(replicated) > 0:
             s = (len(replicated) > 1 and "s") or ""
@@ -635,8 +635,8 @@ class HeadBagValidator(Validator):
             if path not in paths:
                 missing.append(path)
         
-        t = self._issue("4.2-4", "all payload file should "+
-                        "be listed in the file-lookup.tsv file")
+        t = out._issue("4.2-4", "all payload file should "+
+                       "be listed in the file-lookup.tsv file")
         comm = None
         if len(missing) > 0:
             s = (len(missing) > 1 and "s") or ""

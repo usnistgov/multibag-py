@@ -196,7 +196,7 @@ class ValidationResults(object):
     ALL   = ALL
     PROB  = PROB
     
-    def __init__(self, target, want=ALL):
+    def __init__(self, target, want=ALL, version=CURRENT_VERSION):
         """
         initialize an empty set of results for a particular bag
 
@@ -208,9 +208,13 @@ class ValidationResults(object):
                               controls the result of ok():  if the types 
                               indicated by this value all pass, then ok() 
                               returns True.
+        :param str version:   the default version of the multibag profile to
+                              assume is being tested.  (This sets the version
+                              on ValidationIssue instances created by _issue().)
         """
         self.target = target
         self.want    = want
+        self.defversion = version
 
         self.results = {
             ERROR: [],
@@ -334,6 +338,15 @@ class ValidationResults(object):
         """
         self._add_issue(issue, REC, passed, comments)
 
+    def _issue(self, label, message):
+        """
+        return a new ValidationIssue instance that is part of this validator's
+        profile.  The issue type will be set to ERROR and its status, to passed.
+        """
+        return ValidationIssue(label, ERROR, message, True,
+                               profver=self.defversion)
+        
+
 class MultibagValidationError(BagValidationError):
     """
     An exception indicating that the target bag(s) are not compliant with 
@@ -439,11 +452,4 @@ class Validator(object):
         if not results.ok():
             raise MultibagValidationError(results)
 
-    def _issue(self, label, message):
-        """
-        return a new ValidationIssue instance that is part of this validator's
-        profile.  The issue type will be set to ERROR and its status, to passed.
-        """
-        return ValidationIssue(label, ERROR, message, True)
-        
 

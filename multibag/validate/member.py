@@ -48,7 +48,7 @@ class MemberBagValidator(Validator):
         if version and isinstance(version, list):
             version = version[-1]
 
-        t = self._issue("3-Version-for-member",
+        t = out._issue("3-Version-for-member",
                      "A member multibag should include header: Multibag-Version")
         out._rec(t, bool(version))
 
@@ -72,11 +72,11 @@ class MemberBagValidator(Validator):
             return out
 
         name = self.bag._name
-        t = self._issue("2.1a-name-TAB",
-                        "A name must not contain embedded TAB characters")
+        t = out._issue("2.1a-name-TAB",
+                       "A name must not contain embedded TAB characters")
         out._err(t, "\t" not in name)
 
-        t = self._issue("2.1b-name-wsp",
+        t = out._issue("2.1b-name-wsp",
                   "A name must not begin nor end with any whitespace characters")
         out._err(t, not re.search(r'^\s+', name) and not re.search(r'\s+$', name))
 
@@ -91,14 +91,14 @@ class MemberBagValidator(Validator):
             # these tests don't apply
             return out
 
-        t = self._issue("2-Head-Deprecates",
-                        "bag-info.txt: Multibag-Head-Deprecates element "+
-                        "should only be set for Head Bags")
+        t = out._issue("2-Head-Deprecates",
+                       "bag-info.txt: Multibag-Head-Deprecates element "+
+                       "should only be set for Head Bags")
         out._warn(t, "Multibag-Head-Deprecates" in data)
 
-        t = self._issue("2-Tag-Directory",
-                        "bag-info.txt: Multibag-Tag-Directory element "+
-                        "should only be set for Head Bags")
+        t = out._issue("2-Tag-Directory",
+                       "bag-info.txt: Multibag-Tag-Directory element "+
+                       "should only be set for Head Bags")
         out._warn(t, "Multibag-Tag-Directory" in data)
 
         mdir = self.bag.info.get("Multibag-Tag-Directory")
@@ -108,9 +108,9 @@ class MemberBagValidator(Validator):
             mdir = [mdir]
 
         for d in mdir:
-            t = self._issue("2-Tag-Directory",
-                            "bag-info.txt: Multibag tag directory ("+
-                            d + ") should exist only in Head Bags")
+            t = out._issue("2-Tag-Directory",
+                           "bag-info.txt: Multibag tag directory ("+
+                           d + ") should exist only in Head Bags")
             out._warn(t, not self.bag.exists(d))
 
 

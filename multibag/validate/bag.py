@@ -2,7 +2,8 @@
 This module provides the validator implementation for the base BagIt 
 specification.  It delegates this to the LOC bagit module.  
 """
-from .base import Validator, ValidationIssue, ALL, ERROR, WARN, REC, PROB
+from .base import (Validator, ValidationResults, ValidationIssue,
+                   ALL, ERROR, WARN, REC, PROB)
 from ..access.bagit import BagValidationError, BagError, open_bag
 
 class BagValidator(Validator):
@@ -22,7 +23,8 @@ class BagValidator(Validator):
         self.bag = open_bag(bagpath)
 
     def validate(self, want=PROB, results=None):
-        results = super(BagValidator, self).validate(want)
+        if not results:
+            results = ValidationResults(str(self.bag), want)
 
         if (want & ERROR):
             issue = ValidationIssue("2-Bag", ERROR,
