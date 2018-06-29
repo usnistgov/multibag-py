@@ -263,3 +263,10 @@ Multibag component was spun off to create its verison 0.2.
    * The format change for the above mentioned tag files necessitated
      adding restrictions on the names of the component bags and the
      files that appear under the data directory.  
+
+## To do
+
+   * require `multibag/aggregation-info.txt`
+   * specify how to delete files
+   * change `member-bags.tsv` specification to optionally included PID
+   
