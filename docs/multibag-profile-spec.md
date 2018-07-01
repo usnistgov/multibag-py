@@ -346,7 +346,7 @@ An application MUST be able to combine a Multibag aggregation into a single bag 
                the <code>Payload-Oxum</code> and <code>Bag-Size</code>
                fields to ensure their values are correct for the 
                aggregated bag.</p>
-               <p>If the Head Bag <i>does not<i> contain an
+               <p>If the Head Bag <i>does not</i> contain an
                <code>aggregation-info.txt</code> file, an aggregated
                <code>bag-info.txt</code> file should be created via
                the follow steps:
