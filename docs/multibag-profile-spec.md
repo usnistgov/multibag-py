@@ -9,7 +9,7 @@ __Contents__
   * [The `member-bags.tsv` File](#The_member-bags.tsv_File)
   * [The `file-lookup.tsv` File](#The_file-lookup.tsv_File)
   * [The `deleted.txt` File](#The_deleted.txt_File)
-  * [The `aggregation.txt` File](#The_aggregation.txt_File)
+  * [The `aggregation-info.txt` File](#The_aggregation-info.txt_File)
 * [Multibag Aggregation Updates](#Multibag_Aggregation_Updates)
 * [Combining Multibags Into a Single Bag](#Combining_Multibags_Into_a_Single_Bag)
 * [Specification Changes](#Changes)
@@ -251,14 +251,14 @@ member bags (as listed in the `member-bags.tsv` file); however, this
 is not required.
 
 <a name="The_aggregation-info.txt_File"></a>
-### The `aggregation.txt` File
+### The `aggregation-info.txt` File
 
 _This section is normative._
 
 Each bag in a multibag aggregation must be a legal bag itself and thus
 must have a `bag-info.txt` file that describes itself as a standalone
-bag.  Consequently, it can be ambiguous the info metadata should be
-for the aggregation as a whole, particularly in the event that
+bag.  Consequently, it can be ambiguous as to what the info metadata
+should be for the aggregation as a whole, particularly in the event that
 multibags are combined into a single coherent bag.  One of the means
 for determining aggregation's info metadata described in the section,
 ["Combining Multibags Into a Single
@@ -270,7 +270,7 @@ The format of the optional `aggregation-info.txt` file is exactly the
 same as the `bag-info.txt` file and is subject to the same
 requirements; its contents respresent the bag-info metadata for the
 aggregation as a whole (see also section, [Combining Multibags Into a
-Single Bag](#Combining_Multibags_Into_a_Single_Bag).
+Single Bag](#Combining_Multibags_Into_a_Single_Bag)).
 
 
 <a name="Multibag_Aggregation_Updates"></a>
@@ -328,76 +328,82 @@ An application MUST be able to combine a Multibag aggregation into a single bag 
    1. The special BagIt-specific files for the combined bag should be reconstituted according to the following rules:
       <dl>
           <dt> 4.1. <code>bagit.txt</code> </dt>
-          <dd> The aggregated bag should have a `bagit.txt`
+          <dd> The aggregated bag should have a <code>bagit.txt</code>
                that matches that of the aggregation's Head Bag;
                however, this is not required.  The application is
                responsible for ensuring that all tag files employ the
-               coding indicated by the `bagit.txt` file's
-               `Tag-File-Character-Encoding` field.  </dd>
+               coding indicated by the <code>bagit.txt</code> file's
+               <code>Tag-File-Character-Encoding</code> field.  </dd>
           <dt> 4.2. <code>bag-info.txt</code> </dt>
-          <dd> <p>If the Head Bag contains an `aggregation-info.txt` file
-               in its Multibag tag directory (see section,
+          <dd> <p>If the Head Bag contains an
+               <code>aggregation-info.txt</code> file in its Multibag
+               tag directory (see section,
                <a href="#The_Multibag_Tag_Directory">The Multibag Tag
                Directory</a>), that file should be installed as the
-               `bag-info.txt` file for the aggregated bag.  The
+               <code>bag-info.txt</code> file for the aggregated bag.  The
                application may make additional changes to file
                afterward.  In particular, the application may update
-               the `Payload-Oxum` and `Bag-Size` fields to ensure
-               their values are correct for the aggregated bag.</p>
+               the <code>Payload-Oxum</code> and <code>Bag-Size</code>
+               fields to ensure their values are correct for the 
+               aggregated bag.</p>
                <p>If the Head Bag _does not_ contain an
-               `aggregation-info.txt` file, an aggregated
-               `bag-info.txt` file should be created via the follow
-               steps:
+               <code>aggregation-info.txt</code> file, an aggregated
+               <code>bag-info.txt</code> file should be created via
+               the follow steps:
                <ol>
-                 <li> The contents of the `bag-info.txt` file from the
-                      first bag listed in the `member-bags.tsv` file
-                      is considered the initial contents of the
-                      aggregated info tag data. </li>
-                 <li> The tag data from the `bag-info.txt` file from
-                      each subsequent bag listed in the `member-bags.tsv`
-                      file are read in order.  All remaining values associated
-                      with a given field name then over-ride all previous
-                      values with the same name.  Tag data with names
-                      not previously encountered in this process are added
-                      to aggregated tag data.  </li>
+                 <li> The contents of the <code>bag-info.txt</code> file 
+                      from the first bag listed in the
+                      <code>member-bags.tsv</code> file is considered the 
+                      initial contents of the aggregated info tag data. </li>
+                 <li> The tag data from the <code>bag-info.txt</code> file from
+                      each subsequent bag listed in the
+                      <code>member-bags.tsv</code> file are read in order.  
+                      All remaining values associated with a given
+                      field name then over-ride all previous values with the 
+                      same name.  Tag data with names not previously 
+                      encountered in this process are added to aggregated 
+                      tag data.  </li>
                  <li> After the data from the last bag (the Head Bag)
                       has been merged, all tag data from the excepted list 
-                      should be removed; the excepted list includes `Bag-Count`, 
-                      `Payload-Oxum`, `Bag-Size`, and any tag with a 
-                      name starting with `Multibag-`.  
+                      should be removed; the excepted list includes
+                      <code>Bag-Count</code>, <code>Payload-Oxum</code>,
+                      <code>Bag-Size</code>, and any tag with a 
+                      name starting with <code>Multibag-</code>.  
                  <li> The application may make additional changes to
                       the tag data.  In particular, if it is desired
                       that the aggregated bag be a BagIt-compliant
-                      bag, the `Payload-Oxum` and `Bag-Size` tags
-                      should be added to reflect the aggregated bag.
+                      bag, the <code>Payload-Oxum</code> and
+                      <code>Bag-Size</code> tags should be added to reflect 
+                      the aggregated bag.
                  <li> The application should add a tag called
-                      `Multibag-Rebagging-Date` set to the current date.  
-                      </li>
+                      <code>Multibag-Rebagging-Date</code> set to the current 
+                      date.  </li>
                  <li> The tag data that results from the above steps
                       should be written out as the aggregated bag's
-                      `bag-info.txt` file. </li>
+                      <code>bag-info.txt<code> file. </li>
                </ol></p>
                </dd>
           <dt> 4.3. <code>fetch.txt</code>
-          <dd> The aggregated bag's `fetch.txt` file must be a merging
-               all the `fetch.txt` files in the bags listed in the
-               `member-bags.tsv` file according to the following process:
+          <dd> The aggregated bag's <code>fetch.txt</code> file must
+               be a merging all the <code>fetch.txt</code> files in
+               the bags listed in the <code>member-bags.tsv</code>
+               file according to the following process: 
                <ol>
                  <li> The contents from the first bag listed in the
-                      `member-bags.tsv` file is taken as the initial
-                      fetch list for the aggregated bag. </li>
-                 <li> The contents of `fetch.txt` file from
-                      each subsequent bag listed in the `member-bags.tsv`
-                      file are read in order.  Any line with a file
-                      path that matches that of a line from a
-                      previously read file over-rides that previous
-                      line.  </li>
-                 <li> After the `fetch.txt` lines from the last bag (the Head 
-                      Bag) has been merged, any paths listed in the Head Bag's 
-                      `deleted.txt` file must be removed from the
-                      resulting fetch list. </li>
+                      <code>member-bags.tsv</code> file is taken as the
+                      initial fetch list for the aggregated bag. </li>
+                 <li> The contents of <code>fetch.txt</code> file from
+                      each subsequent bag listed in the
+                      <code>member-bags.tsv</code> file are read in 
+                      order.  Any line with a file path that matches 
+                      that of a line from a previously read file 
+                      over-rides that previous line.  </li>
+                 <li> After the <code>fetch.txt</code> lines from the
+                      last bag (the Head Bag) has been merged, any
+                      paths listed in the Head Bag's <code>deleted.txt</code>
+                      file must be removed from the resulting fetch list. </li>
                  <li> The remaining fetch list must be written out as
-                      the aggregated bag's `fetch.txt` file.  </li>
+                      the aggregated bag's <code>fetch.txt</code> file.  </li>
                </ol></dd>
           <dt> 4.4. <code>manifest-</code><i>alg</i><code>.txt</code>, <code>tagmanifest-</code><i>alg</i><code>.txt</code> </dt>
           <dd> A manifest file for the aggregated bag, for each
@@ -406,9 +412,6 @@ An application MUST be able to combine a Multibag aggregation into a single bag 
                member bags.   </dd>
       </dl>
       
-> **Editor's Note:**
-> Need to fill out the rules for step 4 above
-
 Other BagIt profiles may specify rules for reconstituting other tag files from versions in the member bags.  In the absence of such rules, applications should assume assume that versions in the member bags listed later should replace those listed earlier. 
 
 Previous versions of a Multibag aggregation may be assembled into a single bag by consulting a Head Bag's `Multibag-Head-Deprecates` metadata (in its `bag-info.txt` file) and retrieving the Head Bag of the previous version that the element refers to; the application can then follow the above steps with the deprecated Head Bag.  
