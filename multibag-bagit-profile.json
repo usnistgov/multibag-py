@@ -12,7 +12,7 @@
             "description": "The version of the Multibag profile specification that the bag conforms to. The version described by this document is 0.2",
             "required": true,
             "repeatable": false,
-            "values": [ "0.2" ]
+            "values": [ "0.2", "0.3", "0.4" ]
         },
         "Multibag-Reference": {
             "description": "A URL pointing to Multibag specification referred to in the Mulibag-Version element",

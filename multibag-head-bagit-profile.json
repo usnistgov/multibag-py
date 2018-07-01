@@ -5,14 +5,14 @@
         "Contact-Name": "Raymond Plante",
         "Contact-Email": "raymond.plante@nist.gov", 
         "External-Description": "A BagIt profile describing a bag that is part of a bag aggregation that can be logically combined into a larger single bag.  This profile should be considered a draft version.",
-        "Version":"0.2"
+        "Version":"0.4"
     },
     "Bag-Info": {
         "Multibag-Version": {
             "description": "The version of the Multibag profile specification that the bag conforms to. The version described by this document is 0.2",
             "required": true,
             "repeatable": false,
-            "values": [ "0.2" ]
+            "values": [ "0.2", "0.3", "0.4" ]
         },
         "Multibag-Reference": {
             "description": "A URL pointing to Multibag specification referred to in the Mulibag-Version element",
