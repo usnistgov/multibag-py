@@ -410,7 +410,7 @@ An application MUST be able to combine a Multibag aggregation into a single bag 
                algorithm represented, must be the union of the same
                manifest files (type and algorithm) of all of the
                member bags.   </dd>
-      </dl>
+      </dl>
       
 Other BagIt profiles may specify rules for reconstituting other tag files from versions in the member bags.  In the absence of such rules, applications should assume assume that versions in the member bags listed later should replace those listed earlier. 
 
