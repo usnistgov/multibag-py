@@ -17,7 +17,7 @@ from fs import open_fs
 _bagsepre = re.compile(r'/')
 _ossepre = re.compile(os.sep)
 
-MBAG_VERSION = "0.3"
+MBAG_VERSION = "0.4"
 
 MBAG_INTERNAL_SENDER_DESC = \
 """This bag is part of a Multibag aggregation. (See Multibag-Reference for a 
