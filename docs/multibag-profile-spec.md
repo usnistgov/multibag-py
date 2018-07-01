@@ -38,8 +38,6 @@ It is intended that the Multibag profile be used for dataset preservation: all t
 
 To address this problem, this profile supports a mechanism for _non-destructive updates_.  It allows a repository to create "errata" or "update" bags which contain only those parts of the dataset that have changed.  These are combined with the previous bags to create a new Multibag aggregation and a new version of the dataset.  All previous versions of the dataset can be reconstituted by retrieving the proper Head Bag for that version.  
 
-> Note that this version of the Multibag Profile does not address how to handle deletions of files in an update to an aggregation.  This is planned to be addressed in a future version.
-
 <a name="The_Multibag_Data_Structure"></a>
 ## The Multibag Data Structure
 
