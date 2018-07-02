@@ -226,6 +226,27 @@ class TestHeadBagValidator(test.TestCase):
         self.assertEqual(results.failed()[0].label,"4.0-2")
         self.assertTrue(not results.ok())
 
+    def test_validate_aggregation_info(self):
+        valid8r = bagv.HeadBagValidator(self.bagdir)
+        results = valid8r.validate_aggregation_info()
+        self.assertEqual(results.count_applied(), 0)
+        self.assertTrue(results.ok())
+
+        aginfo = os.path.join(self.bagdir, "multibag", "aggregation-info.txt")
+        shutil.copyfile(os.path.join(self.bagdir, "bag-info.txt"), aginfo)
+        valid8r = bagv.HeadBagValidator(self.bagdir)
+        results = valid8r.validate_aggregation_info()
+        self.assertEqual(results.count_applied(), 1)
+        self.assertTrue(results.ok())
+
+        with open(aginfo, 'a') as fd:
+            fd.write("goober\n")
+        valid8r = bagv.HeadBagValidator(self.bagdir)
+        results = valid8r.validate_aggregation_info()
+        self.assertEqual(results.count_applied(), 1)
+        self.assertEqual(results.count_failed(), 1)
+        self.assertTrue(not results.ok())
+
         
     def test_validate(self):
         valid8r = bagv.HeadBagValidator(self.bagdir)
