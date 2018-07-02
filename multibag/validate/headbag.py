@@ -63,7 +63,6 @@ class HeadBagValidator(Validator):
         self.validate_baginfo_recs(want, out, version)
         self.validate_member_bags(want, out, version)
         self.validate_file_lookup(want, out, version)
-        self.validate_deleted(want, out, version)
         self.validate_aggregation_info(want, out, version)
 
         return out
@@ -652,50 +651,6 @@ class HeadBagValidator(Validator):
             comm += missing
         out._rec(t, len(missing) == 0)
 
-        return out
-
-    def validate_deleted(self, want=ALL, results=None, version=CURRENT_VERSION):
-        out = results
-        if not out:
-            out = ValidationResults(str(self.bag), want, version)
-
-        ishead = self.bag.is_head_multibag()
-        mdir = self.bag.info.get("Multibag-Tag-Directory")
-        if not mdir:
-            mdir = "multibag"
-        if not isinstance(mdir, list):
-            mdir = [mdir]
-        mdir = mdir[-1]
-        
-        assert mdir
-        assert ishead
-
-        deleted = "/".join([mdir, "deleted.txt"])
-        if version == "0.2" or version == "0.3" or not self.bag.exists(deleted):
-            return out
-
-        badfmt = []
-        with self.bag.open_text_file(deleted) as fd:
-            i = 0
-            for line in fd:
-                i += 1
-                if not line.strip():
-                    continue
-                parts = [f.strip() for f in line.split()]
-                if len(parts) != 1:
-                   badfmt.append(i)
-
-        t = out._issue("4.3-2", "deleted.txt lines must match format, "+
-                       "FILEPATH")
-        comm = None
-        if len(badfmt) > 0:
-            s = (len(badfmt) > 1 and "s") or ""
-            if len(badfmt) > 4:
-                badfmt[3] = '...'
-                badfmt = badfmt[:4]
-            comm= "line{0} {1}".format(s,", ".join([str(b) for b in badfmt]))
-        out._err(t, len(badfmt) == 0, comm)
-                       
         return out
 
     def validate_aggregation_info(self, want=ALL, results=None,

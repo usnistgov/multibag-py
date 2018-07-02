@@ -226,27 +226,6 @@ class TestHeadBagValidator(test.TestCase):
         self.assertEqual(results.failed()[0].label,"4.0-2")
         self.assertTrue(not results.ok())
 
-    def test_validate_deleted(self):
-        valid8r = bagv.HeadBagValidator(self.bagdir)
-        results = valid8r.validate_deleted()
-        self.assertEqual(results.count_applied(), 0)
-        self.assertTrue(results.ok())
-
-        with open(os.path.join(self.bagdir,"multibag","deleted.txt"),'w') as fd:
-            fd.write("data/trial1.json\n")
-        valid8r = bagv.HeadBagValidator(self.bagdir)
-        results = valid8r.validate_deleted()
-        self.assertEqual(results.count_applied(), 1)
-        self.assertTrue(results.ok())
-
-        with open(os.path.join(self.bagdir,"multibag","deleted.txt"),'w') as fd:
-            fd.write("data/trial1.json goober\n")
-        valid8r = bagv.HeadBagValidator(self.bagdir)
-        results = valid8r.validate_deleted()
-        self.assertEqual(results.count_applied(), 1)
-        self.assertEqual(results.count_failed(), 1)
-        self.assertTrue(not results.ok())
-
     def test_validate_aggregation_info(self):
         valid8r = bagv.HeadBagValidator(self.bagdir)
         results = valid8r.validate_aggregation_info()
