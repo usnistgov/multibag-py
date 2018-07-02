@@ -10,7 +10,7 @@ except ImportError:
 from .base import (Validator, ValidationIssue, ValidationResults, 
                    ALL, ERROR, WARN, REC, PROB, CURRENT_VERSION)
 from .bag import BagValidator
-from ..access.bagit import BagValidationError, BagError, open_bag
+from ..access.bagit import BagValidationError, BagError, open_bag, _load_tag_file
 
 class HeadBagValidator(Validator):
     """
@@ -64,6 +64,7 @@ class HeadBagValidator(Validator):
         self.validate_member_bags(want, out, version)
         self.validate_file_lookup(want, out, version)
         self.validate_deleted(want, out, version)
+        self.validate_aggregation_info(want, out, version)
 
         return out
 
@@ -684,7 +685,7 @@ class HeadBagValidator(Validator):
                 if len(parts) != 1:
                    badfmt.append(i)
 
-        t = out._issue("4.3-2", "file-lookup.tsv lines must match format, "+
+        t = out._issue("4.3-2", "deleted.txt lines must match format, "+
                        "FILEPATH")
         comm = None
         if len(badfmt) > 0:
@@ -697,5 +698,34 @@ class HeadBagValidator(Validator):
                        
         return out
 
+    def validate_aggregation_info(self, want=ALL, results=None,
+                                  version=CURRENT_VERSION):
+        out = results
+        if not out:
+            out = ValidationResults(str(self.bag), want, version)
 
+        ishead = self.bag.is_head_multibag()
+        mdir = self.bag.info.get("Multibag-Tag-Directory")
+        if not mdir:
+            mdir = "multibag"
+        if not isinstance(mdir, list):
+            mdir = [mdir]
+        mdir = mdir[-1]
         
+        assert mdir
+        assert ishead
+
+        aginfo = "/".join([mdir, "aggregation-info.txt"])
+        if version == "0.2" or version == "0.3" or not self.bag.exists(aginfo):
+            return out
+
+        t = out._issue("4.4-1", "aggregation-info.txt must conform to the "+
+                       "tag file format")
+        comm = None
+        try:
+            info = _load_tag_file(self.bag._root.relpath(aginfo))
+        except BagError as ex:
+            comm = ["str(ex)"]
+        out._err(t, not bool(comm), comm)
+
+        return out
