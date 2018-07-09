@@ -205,7 +205,22 @@ class TestSingleMutlibagMaker(test.TestCase):
         self.assertNotIn("about.txt\t"+bagn+"\n", lines)
         self.assertEqual(len(lines), 3)
 
+        # test info tag data
+        bag = Bag(self.bagdir)
+        self.assertEqual(bag.info.get('Multibag-Version'),
+                         amend.CURRENT_VERSION)
+        self.assertEqual(bag.info.get('Multibag-Head-Version'), "1.5")
+        self.assertEqual(bag.info.get('Multibag-Reference'),
+                         amend.CURRENT_REFERENCE)
+        self.assertEqual(bag.info.get('Multibag-Tag-Directory'), "multibag")
 
+        self.assertTrue(isinstance(bag.info.get('Internal-Sender-Description'), list))
+        self.assertEqual(len(bag.info.get('Internal-Sender-Description')),2)
+        self.assertIn("Multibag-Reference",
+                      bag.info.get('Internal-Sender-Description')[1])
+
+        self.assertEqual(bag.info['Bag-Size'], "5.171 kB")
+        
         
 
 if __name__ == '__main__':
