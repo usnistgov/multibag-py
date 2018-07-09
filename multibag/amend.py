@@ -21,6 +21,14 @@ class SingleMultibagMaker(object):
     """
     This class collects operations for turning a standard bag into a head 
     bag for a single-bag aggregation.
+
+    The conversion can be done most easily by instantiating this class and 
+    calling the convert() method.  This method calls write_member_bags(), 
+    write_file_lookup(), and update_info() in sequence.  For greater control
+    over this conversion--namely, to control which files are included in the 
+    file-lookup.tsv file (by default, only the data payload files are 
+    included)--one can call these latter method oneself.  See the documentation
+    for the individual methods for more information.  
     """
     def __init__(self, bagdir, multibag_tagdir="multibag"):
         """
