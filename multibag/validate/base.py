@@ -4,7 +4,7 @@ This module provides base classes and infrastructure for multibag validation
 import sys
 from collections import Sequence, OrderedDict
 
-from ..split import MBAG_VERSION as CURRENT_VERSION
+from ..constants import CURRENT_VERSION
 from ..access.bagit import BagValidationError, BagError, open_bag
 
 if sys.version_info[0] > 2:
