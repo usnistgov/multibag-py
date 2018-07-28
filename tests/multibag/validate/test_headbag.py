@@ -268,6 +268,14 @@ class TestHeadBagValidator(test.TestCase):
         with self.assertRaises(val.MultibagValidationError):
             valid8r.ensure_valid()
 
+    def test_validate_func(self):
+        bagv.validate(self.bagdir)
+
+        with open(os.path.join(self.bagdir,"multibag","file-lookup.tsv"),"a") as fd:
+            fd.write("goober  \t  samplembag\n")
+
+        with self.assertRaises(val.MultibagValidationError):
+            bagv.validate(self.bagdir)
         
         
 

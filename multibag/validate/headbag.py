@@ -684,3 +684,17 @@ class HeadBagValidator(Validator):
         out._err(t, not bool(comm), comm)
 
         return out
+
+def validate(bagpath, want=PROB):
+    """
+    validate a bag (serialized or not) as a legal head bag of a multibag 
+    aggregation.
+
+    :param want int: bit-wise and-ed codes indicating which types of 
+                     test results are desired.  A validator may (but 
+                     is not required to) use this value to skip 
+                     execution of certain tests.
+    :raise MultibagValidationError if validation errors are detected
+    """
+    HeadBagValidator(bagpath).ensure_valid(want)
+
