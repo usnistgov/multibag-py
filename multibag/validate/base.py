@@ -398,8 +398,8 @@ class Validator(object):
         """
         initialize the validator
 
-        :param str validator:  a name indicating the target bag or bags being 
-                               validated.
+        :param str target:  a name indicating the target bag or bags being 
+                            validated.
         """
         self.target = target
 
@@ -446,7 +446,7 @@ class Validator(object):
                              is not required to) use this value to skip 
                              execution of certain tests.
 
-        :raise BagValidationError:  if any of the requested tests fail.
+        :raise MultibagValidationError:  if any of the requested tests fail.
         """
         results = self.validate(want)
         if not results.ok():
