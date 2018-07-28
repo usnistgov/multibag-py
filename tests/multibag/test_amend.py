@@ -9,7 +9,9 @@ import unittest as test
 from functools import cmp_to_key
 
 import multibag.amend as amend
-from multibag.access.bagit import Bag, ReadOnlyBag, Path, open_bag
+import multibag.access.bagit as bagit
+import multibag.validate as valid8
+import tests.multibag.access.mkdata as mkdata
 
 datadir = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                        "access", "data")
@@ -21,7 +23,7 @@ class TestSingleMutlibagMaker(test.TestCase):
         self.bagdir = os.path.join(self.tempdir, "samplebag")
         shutil.copytree(os.path.join(datadir, "samplembag"), self.bagdir)
         shutil.rmtree(os.path.join(self.bagdir, "multibag"))
-        bag = Bag(self.bagdir)
+        bag = bagit.Bag(self.bagdir)
         rmtag = []
         for tag in bag.info:
             if tag.startswith('Multibag-'):
@@ -51,12 +53,12 @@ class TestSingleMutlibagMaker(test.TestCase):
 
     def test_update_info(self):
         # test assumption
-        bag = Bag(self.bagdir)
+        bag = bagit.Bag(self.bagdir)
         for tag in bag.info:
             self.assertFalse(tag.startswith('Multibag-'))
 
         self.mkr.update_info()
-        bag = Bag(self.bagdir)
+        bag = bagit.Bag(self.bagdir)
         self.assertEqual(bag.info.get('Multibag-Version'),
                          amend.CURRENT_VERSION)
         self.assertEqual(bag.info.get('Multibag-Head-Version'), "1")
@@ -73,7 +75,7 @@ class TestSingleMutlibagMaker(test.TestCase):
 
         self.mkr = amend.SingleMultibagMaker(self.bagdir, "goober")
         self.mkr.update_info("1.0", "1.1")
-        bag = Bag(self.bagdir)
+        bag = bagit.Bag(self.bagdir)
 
         self.assertEqual(bag.info.get('Multibag-Version'), "1.1")
         self.assertEqual(bag.info.get('Multibag-Head-Version'), "1.0")
@@ -84,7 +86,7 @@ class TestSingleMutlibagMaker(test.TestCase):
         del bag.info['Internal-Sender-Description']
         bag.save()
         self.mkr.update_info()
-        bag = Bag(self.bagdir)
+        bag = bagit.Bag(self.bagdir)
         
         self.assertEqual(bag.info.get('Multibag-Head-Version'), "1")
         self.assertEqual(bag.info.get('Multibag-Tag-Directory'), "goober")
@@ -206,7 +208,7 @@ class TestSingleMutlibagMaker(test.TestCase):
         self.assertEqual(len(lines), 3)
 
         # test info tag data
-        bag = Bag(self.bagdir)
+        bag = bagit.Bag(self.bagdir)
         self.assertEqual(bag.info.get('Multibag-Version'),
                          amend.CURRENT_VERSION)
         self.assertEqual(bag.info.get('Multibag-Head-Version'), "1.5")
@@ -220,7 +222,36 @@ class TestSingleMutlibagMaker(test.TestCase):
                       bag.info.get('Internal-Sender-Description')[1])
 
         self.assertEqual(bag.info['Bag-Size'], "5.171 kB")
-        
+
+    def test_convert_new(self):
+        # create the data
+        self.bagdir = os.path.join(self.tempdir, "sampledata")
+        self.assertTrue(not os.path.isdir(self.bagdir))
+        dm = mkdata.DatasetMaker(self.bagdir,
+                                 { 'totalsize': 15, 'totalfiles': 3,
+                                   'files': [{
+                                       'totalsize': 10, 'totalfiles': 2
+                                   }], 'dirs': [{
+                                       'totalsize': 5, 'totalfiles': 1
+                                   }]
+                                 })
+        dm.fill()
+        self.assertTrue(os.path.isdir(self.bagdir))
+
+        # turn it into a bag
+        bag = bagit.make_bag(self.bagdir)
+        self.assertTrue(bag.validate())
+
+        mbdir = os.path.join(self.bagdir,'multibag')
+        self.assertTrue(not os.path.exists(mbdir))
+
+        # convert it to a multibag
+        self.mkr = amend.SingleMultibagMaker(self.bagdir)
+        self.mkr.convert("1.5", "doi:XXXX/11111")
+        self.assertTrue(os.path.exists(mbdir))
+
+        # validate it as a head bag
+        valid8.validate_headbag(self.bagdir)
         
 
 if __name__ == '__main__':
