@@ -291,7 +291,7 @@ class ReadOnlyBag(_bagit.Bag):
         entries for existing files).
         """
         for tagfilepath in self.tagfile_entries().keys():
-            if not self.root.fs.isfile(tagfilepath):
+            if not self._root.fs.isfile(tagfilepath):
                 yield tagfilepath
 
     def fetch_entries(self):
