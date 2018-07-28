@@ -484,9 +484,54 @@ class TestDatasetMaker(test.TestCase):
             [os.stat(os.path.join(self.dsdir,f)).st_size for f in fns[1]])
         self.assertEqual(sizes, [220, 220, 220, 220, 220])
         
+    def test_fill(self):
+        mkr = mkdata.DatasetMaker(self.dsdir,
+                                  { 'totalsize': 15, 'totalfiles': 3,
+                                    'files': [{
+                                        'totalsize': 10, 'totalfiles': 2
+                                    }], 'dirs': [{
+                                        'totalsize': 5, 'totalfiles': 1
+                                    }]
+                                  })
+        self.assertTrue(not os.path.exists(self.dsdir))
 
+        mkr.fill()
+        self.assertTrue(os.path.exists(self.dsdir))
 
+        fns = os.listdir(self.dsdir)
+        self.assertEqual(len(fns), 3,
+                         "Wrong number of file/dirs: expected 3; got "+str(fns))
+        dirs = [f for f in fns if f.endswith('_d')]
+        self.assertEqual(len(dirs), 1)
+        self.assertTrue(os.path.isdir(os.path.join(self.dsdir,dirs[0])),
+                        "Not a directoru: "+str(dirs))
 
+        sizes = sorted(
+            [os.stat(os.path.join(self.dsdir,f)).st_size for f in fns
+             if not f.endswith('_d')])
+        self.assertEqual(sizes, [ 5, 5 ])
+
+        fns = os.listdir(os.path.join(self.dsdir, dirs[0]))
+        self.assertEqual(len(fns), 1)
+        self.assertEqual(os.stat(os.path.join(self.dsdir, dirs[0],fns[0])).st_size,
+                         5)
+
+    def test_mkdataset(self):
+        self.assertTrue(not os.path.exists(self.dsdir))
+
+        mkdata.mkdataset(self.dsdir, 130)
+        
+        fns = os.listdir(self.dsdir)
+        self.assertEqual(len(fns), 10,
+                         "Wrong number of files: expected 10; got "+str(fns))
+        dirs = [f for f in fns if f.endswith('_d')]
+        self.assertEqual(len(dirs), 0)
+        
+        sizes = sorted(
+            [os.stat(os.path.join(self.dsdir,f)).st_size for f in fns
+             if not f.endswith('_d')])
+        self.assertEqual(sum(sizes), 130)
+        self.assertTrue(all([sz == 13 for sz in sizes]))
         
         
 

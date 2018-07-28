@@ -6,7 +6,7 @@ import os, math, random
 from copy import deepcopy
 from abc import ABCMeta, abstractmethod
 
-def mkdataset(destdir, totalsize, filecount=10, hints=None):
+def mkdataset(destdir, totalsize, filecount=10, plan=None):
     """
     create a fake dataset--a collection of files with dummy contents--subject
     to contstraints.
@@ -15,10 +15,22 @@ def mkdataset(destdir, totalsize, filecount=10, hints=None):
     :param int totalsize: the total size--the total sum of bytes across all 
                           files--of the dataset to be created.
     :param int filecount: the total number of files to create
-    :param dict hints:    hints on how to distribute bytes across different 
+    :param dict plan:     hints on how to distribute bytes across different 
                           files.
     """
-    pass
+    if not plan:
+        plan = {
+            'files': [{
+                'totalsize': totalsize,
+                'totalfiles': filecount,
+                'type': 'uniform'
+            }]
+        }
+    plan.update({
+        'totalsize': totalsize,
+        'totalfiles': filecount
+    })
+    DatasetMaker(destdir, plan).fill()
 
 class DatasetMaker(object):
     """
@@ -49,7 +61,7 @@ class DatasetMaker(object):
         """
         fill out the dataset according to plan
         """
-        return self._file_dir('',
+        return self._fill_dir('',
                               self.plan['totalsize'], 
                               self.plan['totalfiles'],
                               self.plan.get('files', []),
