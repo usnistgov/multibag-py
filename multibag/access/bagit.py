@@ -129,13 +129,22 @@ def open_bin_file(path, mode='r', buffering=-1):
 # 
 class ReadOnlyBag(_bagit.Bag):
     """
-    A representation of a bag.   
+    A representation of a (possibly serialized) bag.   
 
     This implementation extends the LOC bagit.Bag class to access a bag via
-    the fs module.
+    the fs module.  This allows the underlying bag to be in a serialized form.
+    To open a serialized bag, the factory function open_bag() is recommended
+    instead of instantiating this class directly.
     """
 
     def __init__(self, bagpath, name=None):
+        """
+        open the bag with the given location
+        :param bagpath:  either a Path instance or a filepath to the bag's 
+                         root directory.  A Path instance must be used if the 
+                         bag is in a serialized form.  
+        :type bagpath:   str or Path
+        """
         if not bagpath:
             raise BagError(_("path to bag root directory not provided"))
         if not isinstance(bagpath, Path):

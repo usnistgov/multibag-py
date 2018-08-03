@@ -198,9 +198,9 @@ class SplitPlan(object):
                            name_output_bags()).  See name_output_bags() for 
                            the requirements of a naming iterator.  
         :param Logger logger: a logger instance to send messages to.
-        :return iterator: an iterator whose next() method will write the next
-                          member bag and returns its output path.  StopIteration
-                          is raised when there are no more output bags to write.
+        :rtype: an iterator whose next() method will write the next
+                member bag and returns its output path.  StopIteration
+                is raised when there are no more output bags to write.
         """
         if not self.manifests:
             if logger:
@@ -391,8 +391,8 @@ class Splitter(object):
         the logic behind the split strategy.  
 
         :param str bagpath:  the path to the the source bag's root directory
-        :return SplitPlan:   a plan that describes how the given bag should 
-                             be split into multibags.  
+        :rtype:   a SplitPlan instance that describes how the given bag should 
+                  be split into multibags.  
         """
         raise NotImplementedError()
 
@@ -407,8 +407,8 @@ class Splitter(object):
                              namebasis as a base name.  Otherwise, it is 
                              a naming iterator; see SplitPlan.name_output_bags()
                              for its requirements.
-        :return SplitPlan:   a plan that describes how the given bag should 
-                             be split into multibags.  
+        :rtype:   a SplitPlan that describes how the given bag should 
+                  be split into multibags.  
         """
         if not namebasis:
             namebasis = os.path.splitext(os.path.basename(bagpath))[0]
@@ -436,7 +436,7 @@ class Splitter(object):
                              namebasis as a base name.  Otherwise, it is 
                              a naming iterator; see SplitPlan.name_output_bags()
                              for its requirements.
-        :return [str]:  a list of the names of the output bags.
+        :rtype:  a list of str, the names of the output bags.
         """
         plan = self.plan(bagpath, namebasis)
 

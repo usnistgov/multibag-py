@@ -415,7 +415,7 @@ class Validator(object):
         :param results ValidationResults: a ValidationResults to add result
                              information to; if provided, this instance will 
                              be the one returned by this method.
-        :return ValidationResults:  the results of applying requested validation
+        :rtype: ValidationResults:  the results of applying requested validation
                              tests
         """
         out = results
