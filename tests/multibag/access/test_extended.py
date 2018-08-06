@@ -205,6 +205,9 @@ class TestExtendedReadWritableBag(test.TestCase):
 
         finally:
             shutil.rmtree(tempdir)
+
+    def test_is_head_multibag(self):
+        self.assertTrue(self.bag.is_head_multibag())
     
 
 class TestExtendReadOnlyBag(test.TestCase):

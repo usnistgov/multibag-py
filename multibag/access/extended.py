@@ -156,7 +156,14 @@ class ExtendedReadMixin(object):
 
         self.info = tags
 
-             
+    def is_head_multibag(self):
+        """
+        return True if this bag is a designated as the head bag of a multibag
+        aggregation.  This implementation returns True if the 
+        'Multibag-Head-Version' is set.  
+        """
+        return 'Multibag-Head-Version' in self.info
+
                
       
 class _ExtendedReadWritableMixin(ExtendedReadMixin):
@@ -506,6 +513,13 @@ class ExtendedReadOnlyBag(ReadOnlyBag, _ExtendedReadOnlyMixin):
     A ReadOnlyBag (which may be serialized) with an extended interface.
     """
     def __init__(self, bagpath, name=None):
+        """
+        open the bag with the given location
+        :param bagpath:  either a Path instance or a filepath to the bag's 
+                         root directory.  A Path instance must be used if the 
+                         bag is in a serialized form.  
+        :type bagpath:   str or Path
+        """
         super(ExtendedReadOnlyBag, self).__init__(bagpath, name)
         self._extend()
 
@@ -520,7 +534,7 @@ def as_extended(bag):
     is returned with its class updated.
     """
     if not isinstance(bag, Bag):
-        raise ValueError("asProgenitor(): input not of type Bag: " + str(bag))
+        raise ValueError("as_extended(): input not of type Bag: " + str(bag))
 
     # already extended; just return it
     if isinstance(bag, ExtendedReadMixin):
