@@ -83,13 +83,18 @@ class ExtendedReadMixin(object):
         raise NotImplementedError()
 
     @abstractmethod
-    def walk(self):
+    def walk(self, start=None):
         """
         Walk the source bag contents returning the triplets returned by
         os.path.  The difference is that the first element in the triplet,
         the base directory, will be relative to the bag's base directory;
         for files and directories directly below the base, the field will 
         be an empty string.
+
+        :param str start:  the path to a directory, relative to the root,
+                           where the walk should start.  The path must
+                           be delimited by forward slashes ('/'), regardless
+                           of the platform.  
         """
         raise NotImplementedError()
 
@@ -336,7 +341,7 @@ class _ExtendedReadWritableMixin(ExtendedReadMixin):
         path = self._canon_path(path)
         return codecs.open(path, encoding=encoding);
         
-    def walk(self):
+    def walk(self, start=None):
         """
         Walk the source bag contents returning the triplets returned by
         os.path with two differences.  
@@ -348,8 +353,22 @@ class _ExtendedReadWritableMixin(ExtendedReadMixin):
 
         The second difference is that the path separator will always be a 
         forward slash ('/'), consistent with the BagIt standard.
+
+        :param str start:  the path to a directory, relative to the root,
+                           where the walk should start.  The path must
+                           be delimited by forward slashes ('/'), regardless
+                           of the platform.  
         """
-        for dir, subdirs, files in os.walk(self._bagdir):
+        if not start:
+            start = ''
+        start = os.path.join(*(re.split(r'/+', start)))
+        if os.path.isabs(start):
+            raise ValueError("walk(): start must not be absolute: "+start)
+        root = os.path.join(self._bagdir, start).rstrip(os.sep)
+        if not os.path.isdir(root):
+            raise ValueError("walk(): start is not a subdirectory: "+start)
+
+        for dir, subdirs, files in os.walk(root):
             # make dir relative to bag's root directory
             if dir.startswith(self._bagdir):
                 dir = dir[len(self._bagdir):].lstrip(os.sep)
@@ -489,7 +508,7 @@ class _ExtendedReadOnlyMixin(ExtendedReadMixin):
         """
         return self._root.fs.open(path, encoding=encoding)
 
-    def walk(self):
+    def walk(self, start=None):
         """
         Walk the source bag contents returning the triplets returned by
         os.path with two differences.  
@@ -501,12 +520,26 @@ class _ExtendedReadOnlyMixin(ExtendedReadMixin):
 
         The second difference is that the path separator will always be a 
         forward slash ('/'), consistent with the BagIt standard.
+
+        :param str start:  the path to a directory, relative to the root,
+                           where the walk should start.  The path must
+                           be delimited by forward slashes ('/'), regardless
+                           of the platform.  
         """
-        witer = self._root.fs.walk.walk()
+        if not start:
+            start = ''
+        if start.startswith('/'):
+            raise ValueError("walk(): start must not be absolute: "+start)
+        if not start:
+            root = self._root
+        else:
+            root = self._root.subfspath(start)
+
+        witer = root.fs.walk.walk()
         while True:
-            root, dirs, files = next(witer)
-            root = root.lstrip('/')
-            yield root, [d.name for d in dirs], [f.name for f in files]
+            base, dirs, files = next(witer)
+            base = '/'.join([start, base.lstrip('/')]).strip('/')
+            yield base, [d.name for d in dirs], [f.name for f in files]
 
 class ExtendedReadOnlyBag(ReadOnlyBag, _ExtendedReadOnlyMixin):
     """

@@ -125,6 +125,16 @@ class TestExtendedReadWritableBag(test.TestCase):
 
         self.assertEqual(len(contents), 5)
 
+    def test_walk_sub(self):
+        contents = list(self.bag.walk("data/trial3"))
+        self.assertEqual(contents, [("data/trial3", [], ['trial3a.json'])])
+
+        contents = list(self.bag.walk("data"))
+        self.assertEqual(len(contents), 2)
+        self.assertEqual(contents[0], ("data", ["trial3"],
+                                       ['trial1.json', 'trial2.json']))
+        self.assertEqual(contents[1], ("data/trial3", [], ['trial3a.json']))
+
     def test_nonstandard(self):
         tempdir = tempfile.mkdtemp()
         try:
@@ -319,6 +329,16 @@ class TestExtendReadOnlyBag(test.TestCase):
         self.assertEqual(len(files), 1)
 
         self.assertEqual(len(contents), 9)
+
+    def test_walk_sub(self):
+        contents = list(self.bag.walk("data/trial3"))
+        self.assertEqual(contents, [("data/trial3", [], ['trial3a.json'])])
+
+        contents = list(self.bag.walk("data"))
+        self.assertEqual(len(contents), 2)
+        self.assertEqual(contents[0], ("data", ["trial3"],
+                                       ['trial1.json', 'trial2.json']))
+        self.assertEqual(contents[1], ("data/trial3", [], ['trial3a.json']))
 
     def test_nonstandard(self):
         tempdir = tempfile.mkdtemp()
