@@ -508,7 +508,7 @@ class ReadOnlyBag(_bagit.Bag):
                 stored_hash = hashes[alg]
                 if stored_hash.lower() != computed_hash:
                     e = ChecksumMismatch(rel_path, alg, stored_hash.lower(), computed_hash)
-                    LOGGER.warning(force__unicode(e))
+                    LOGGER.warning(_unicode(e))
                     errors.append(e)
 
         if errors:
@@ -563,7 +563,7 @@ def _calc_hashes(args):
         f_hashes = _calculate_file_hashes(full_path, f_hashers)
     except BagValidationError as e:
         f_hashes = dict(
-            (alg, force__unicode(e)) for alg in f_hashers.keys()
+            (alg, _unicode(e)) for alg in f_hashers.keys()
         )
 
     return rel_path, f_hashes, hashes
@@ -586,7 +586,7 @@ def _calculate_file_hashes(full_path, f_hashers):
     except (OSError, IOError) as e:
         raise BagValidationError(_("Could not read %(filename)s: %(error)s") % {
             'filename': full_path,
-            'error': force__unicode(e),
+            'error': _unicode(e),
         })
 
     return dict(

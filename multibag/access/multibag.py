@@ -742,12 +742,12 @@ def as_headbag(bag, readonly=False):
         else:
             # isinstance(bag, ExtendedReadWritableBag) == True
             bag.__class__ = _NoUpdateHeadBag
-        HeadBagReadMixin.__init__()
+        HeadBagReadMixin.__init__(bag)
 
     if not isinstance(bag, HeadBagUpdateMixin) and not readonly and \
-       not isinstance(ExtendedReadOnlyBag):
+       not isinstance(bag, ExtendedReadOnlyBag):
         bag.__class__ = HeadBag
-        HeadBagUpdateMixin.__init__()
+        HeadBagUpdateMixin.__init__(bag)
 
     return bag
 
