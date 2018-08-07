@@ -9,6 +9,7 @@ import unittest as test
 
 import multibag.validate.base as val
 from multibag.access.bagit import Bag, ReadOnlyBag, Path, open_bag
+from multibag.constants import CURRENT_VERSION
 
 datadir=os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))),
                      "access", "data")
@@ -18,7 +19,7 @@ class TestValidationIssue(test.TestCase):
     def test_ctor(self):
         issue = val.ValidationIssue("A1.1")
 
-        self.assertEqual(issue.profile_version, "0.3")
+        self.assertEqual(issue.profile_version, CURRENT_VERSION)
         self.assertEqual(issue.label, "A1.1")
         self.assertEqual(issue.type, issue.ERROR)
         self.assertTrue(issue.passed())
@@ -67,7 +68,7 @@ class TestValidationIssue(test.TestCase):
     def test_description(self):
         
         issue = val.ValidationIssue("A1.1")
-        self.assertEqual(issue.summary, "PASSED: multibag 0.3 A1.1")
+        self.assertEqual(issue.summary, "PASSED: multibag 0.4 A1.1")
         self.assertEqual(str(issue), issue.summary)
         self.assertEqual(issue.description, issue.summary)
 
