@@ -39,7 +39,7 @@ class MemberBagValidator(Validator):
         :param results ValidationResults: a ValidationResults to add result
                              information to; if provided, this instance will 
                              be the one returned by this method.
-        :return ValidationResults:  the results of applying requested validation
+        :rtype: ValidationResults:  the results of applying requested validation
                              tests
         """
         out = results
@@ -119,8 +119,18 @@ class MemberBagValidator(Validator):
                            d + ") should exist only in Head Bags")
             out._warn(t, not self.bag.exists(d))
 
-
-
-
         return out
             
+def validate(bagpath, want=PROB):
+    """
+    validate a bag (serialized or not) as a legal member bag of a multibag 
+    aggregation.
+
+    :param want int: bit-wise and-ed codes indicating which types of 
+                     test results are desired.  A validator may (but 
+                     is not required to) use this value to skip 
+                     execution of certain tests.
+    :raise MultibagValidationError if validation errors are detected
+    """
+    MemberBagValidator(bagpath).ensure_valid(want)
+

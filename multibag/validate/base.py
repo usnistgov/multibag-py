@@ -4,7 +4,7 @@ This module provides base classes and infrastructure for multibag validation
 import sys
 from collections import Sequence, OrderedDict
 
-from ..split import MBAG_VERSION as CURRENT_VERSION
+from ..constants import CURRENT_VERSION
 from ..access.bagit import BagValidationError, BagError, open_bag
 
 if sys.version_info[0] > 2:
@@ -398,8 +398,8 @@ class Validator(object):
         """
         initialize the validator
 
-        :param str validator:  a name indicating the target bag or bags being 
-                               validated.
+        :param str target:  a name indicating the target bag or bags being 
+                            validated.
         """
         self.target = target
 
@@ -415,7 +415,7 @@ class Validator(object):
         :param results ValidationResults: a ValidationResults to add result
                              information to; if provided, this instance will 
                              be the one returned by this method.
-        :return ValidationResults:  the results of applying requested validation
+        :rtype: ValidationResults:  the results of applying requested validation
                              tests
         """
         out = results
@@ -446,7 +446,7 @@ class Validator(object):
                              is not required to) use this value to skip 
                              execution of certain tests.
 
-        :raise BagValidationError:  if any of the requested tests fail.
+        :raise MultibagValidationError:  if any of the requested tests fail.
         """
         results = self.validate(want)
         if not results.ok():

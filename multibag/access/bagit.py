@@ -129,13 +129,22 @@ def open_bin_file(path, mode='r', buffering=-1):
 # 
 class ReadOnlyBag(_bagit.Bag):
     """
-    A representation of a bag.   
+    A representation of a (possibly serialized) bag.   
 
     This implementation extends the LOC bagit.Bag class to access a bag via
-    the fs module.
+    the fs module.  This allows the underlying bag to be in a serialized form.
+    To open a serialized bag, the factory function open_bag() is recommended
+    instead of instantiating this class directly.
     """
 
     def __init__(self, bagpath, name=None):
+        """
+        open the bag with the given location
+        :param bagpath:  either a Path instance or a filepath to the bag's 
+                         root directory.  A Path instance must be used if the 
+                         bag is in a serialized form.  
+        :type bagpath:   str or Path
+        """
         if not bagpath:
             raise BagError(_("path to bag root directory not provided"))
         if not isinstance(bagpath, Path):
@@ -291,7 +300,7 @@ class ReadOnlyBag(_bagit.Bag):
         entries for existing files).
         """
         for tagfilepath in self.tagfile_entries().keys():
-            if not self.root.fs.isfile(tagfilepath):
+            if not self._root.fs.isfile(tagfilepath):
                 yield tagfilepath
 
     def fetch_entries(self):
@@ -499,7 +508,7 @@ class ReadOnlyBag(_bagit.Bag):
                 stored_hash = hashes[alg]
                 if stored_hash.lower() != computed_hash:
                     e = ChecksumMismatch(rel_path, alg, stored_hash.lower(), computed_hash)
-                    LOGGER.warning(force__unicode(e))
+                    LOGGER.warning(_unicode(e))
                     errors.append(e)
 
         if errors:
@@ -554,7 +563,7 @@ def _calc_hashes(args):
         f_hashes = _calculate_file_hashes(full_path, f_hashers)
     except BagValidationError as e:
         f_hashes = dict(
-            (alg, force__unicode(e)) for alg in f_hashers.keys()
+            (alg, _unicode(e)) for alg in f_hashers.keys()
         )
 
     return rel_path, f_hashes, hashes
@@ -577,7 +586,7 @@ def _calculate_file_hashes(full_path, f_hashers):
     except (OSError, IOError) as e:
         raise BagValidationError(_("Could not read %(filename)s: %(error)s") % {
             'filename': full_path,
-            'error': force__unicode(e),
+            'error': _unicode(e),
         })
 
     return dict(
@@ -612,7 +621,7 @@ def open_bag(location):
         fspath = Path(fs.open_fs(location), "", location+':')
 
     elif not os.path.exists(location):
-        raise ValueError(location + ": path not found")
+        raise OSError(2, "File not found: "+location, location)
 
     elif os.path.isdir(location):
         # it's a unserialized bag on local disk

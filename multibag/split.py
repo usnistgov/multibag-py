@@ -8,7 +8,9 @@ from collections import OrderedDict
 from copy import deepcopy
 from functools import cmp_to_key
 
+from .constants import CURRENT_VERSION as MBAG_VERSION
 from .access.bagit import Bag, ReadOnlyBag
+from .access.extended import as_extended, ExtendedReadMixin as ProgenitorMixin
 from bagit import _parse_tags
 
 from fs.copy import copy_file
@@ -16,8 +18,6 @@ from fs import open_fs
 
 _bagsepre = re.compile(r'/')
 _ossepre = re.compile(os.sep)
-
-MBAG_VERSION = "0.4"
 
 MBAG_INTERNAL_SENDER_DESC = \
 """This bag is part of a Multibag aggregation. (See Multibag-Reference for a 
@@ -33,471 +33,16 @@ if sys.version_info[0] > 2:
 else:
     _unicode = unicode
 
-class ProgenitorMixin(object):
-    """
-    a complete bag that can be split into set of multibag-compliant bags.
-
-    A ProgenitorBag gives access that the source bag content, and so is 
-    read-only.  
-    """
-    __metaclass__ = ABCMeta
-
-    _is_readonly = True
-
-    def __init__(self):
-        super(ProgenitorMixin, self).__init__()
-
-    @property
-    def is_readonly(self):
-        """
-        returns True if this bag is set to be read-only.  
-        """
-        return self._is_readonly
-
-    @property
-    def name(self):
-        """
-        the name of the root directory of the bag (without any parent path
-        included).
-        """
-        return self._get_bag_name()
-
-    @abstractmethod
-    def _get_bag_name(self):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def exists(self, path):
-        """
-        return True if the given path exists in this bag.  
-        :param path str:  the path to test, given relative to the bag's base
-                          directory.  '/' must be used as the path delimiter.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def isdir(self, path):
-        """
-        return True if the given path exists as a subdirectory in the bag
-        :param path str:  the path to test, given relative to the bag's base
-                          directory.  '/' must be used as the path delimiter.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def isfile(self, path):
-        """
-        return True if the given path exists as a file in the bag
-        :param path str:  the path to test, given relative to the bag's base
-                          directory.  '/' must be used as the path delimiter.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def walk(self):
-        """
-        Walk the source bag contents returning the triplets returned by
-        os.path.  The difference is that the first element in the triplet,
-        the base directory, will be relative to the bag's base directory;
-        for files and directories directly below the base, the field will 
-        be an empty string.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def replicate(self, path, destdir):
-        """
-        copy a file from the source bag to the same location in an output bag.
-
-        :param str path:  the path, relative to the source bag's root directory,
-                          to the file to be replicated.
-        :param str destdir:  the destination directory.  This is usually the 
-                          root directory of another bag.  
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def open_text_file(self, path, encoding='utf-8-sig'):
-        """
-        return a open, read-only file object on the file from the source bag 
-        with the given path.
-
-        :param str path:     the path to the file to open, relative to the source
-                             bag's root directory.
-        :param str encoding  a label indicating the encoding to expect in the 
-                             file.  (Default: "utf-8-sig").
-        """
-        raise NotImplementedError()
-
-    def nonstandard(self):
-        """
-        iterate through the non-standard files in this bag.  This will 
-        exclude the special files defined by the BagIt standard (bagit.txt,
-        bag-info.txt, fetch.txt and the manifest files).  It will include
-        any directory in the bag that is empty (to allow it to be replicated
-        in output multibags).
-        """
-        special = [re.compile(r) for r in
-                       r"^bagit.txt$ ^bag-info.txt$ ^fetch.txt$".split() +
-                       r"^(tag)?manifest-(\w+).txt$".split()]
-
-        for dir, subdirs, files in self.walk():
-            if len(subdirs) == 0 and len(files) == 0:
-                # spit out a directory if it is empty
-                yield dir
-            for file in files:
-                # don't spit out a file is it's one of the special ones
-                if not any([bool(spf.match(file)) for spf in special]):
-                    yield os.path.join(dir, file)
-
-    def _load_bag_info(self):
-        # this (re-)reads the bag-info data, loading it into an OrderedDict
-
-        tags = OrderedDict()
-        with self.open_text_file(self.tag_file_name) as fd:
-            for name, value in _parse_tags(fd):
-                if name not in tags:
-                    tags[name] = value
-                    continue
-
-                if not isinstance(tags[name], list):
-                    tags[name] = [tags[name], value]
-                else:
-                    tags[name].append(value)
-
-        self.info = tags
-        
-
-class LocalDirProgenitor(ProgenitorMixin):
-    """
-    An implementation of the ProgenitorMixin for a Bag that is stored as 
-    a directory on a local filesystem.  
-    """
-    is_readonly = False
-
-    def __init__(self, bagdir):
-        self._bagdir = bagdir.rstrip(os.sep)
-        self._bagname = os.path.basename(bagdir)
-        self._replwhl = True
-        super(LocalDirProgenitor, self).__init__()
-
-    @property
-    def replicate_with_hardlink(self):
-        """
-        a flag indicating, if True, that requests to replicate a file will be 
-        by attempted by creating a hard link at the destination to the original
-        file.  Doing so will save space on disk because bytes are not replicated.
-        This is not supported on Windows.  On UNIX-like systems, hard links are 
-        only possible when the source and destinations are on the same filesystem.
-        When this is not the case, replicate falls back to a true copy.  
-        """
-        return self._replwhl
-
-    @replicate_with_hardlink.setter
-    def replicate_with_hardlink(self, yes):
-        """
-        set the flag with a True or False
-        """
-        self._replwhl = bool(yes)
-
-    def _get_bag_name(self):
-        return self._bagname
-
-    def _canon_path(self, path):
-        if os.sep != '/':
-            path = _bagsepre.sub(os.sep, path)
-        path = os.path.normpath(os.path.join(self._bagdir, path))
-        if not path.startswith(os.path.normpath(self._bagdir)):
-            return None
-        return path
-
-    def exists(self, path):
-        """
-        return True if the given path exists in this bag.  
-        :param str path:  the path to test, given relative to the bag's base
-                          directory.  '/' must be used as the path delimiter.
-        """
-        path = self._canon_path(path)
-        if path is None:
-            return False
-        return os.path.exists(path)
-
-    def isdir(self, path):
-        """
-        return True if the given path exists as a subdirectory in the bag
-        :param path str:  the path to test, given relative to the bag's base
-                          directory.  '/' must be used as the path delimiter.
-        """
-        path = self._canon_path(path)
-        if path is None:
-            return False
-        return os.path.isdir(path)
-
-    def isfile(self, path):
-        """
-        return True if the given path exists as a file in the bag
-        :param str path:  the path to test, given relative to the bag's base
-                          directory.  '/' must be used as the path delimiter.
-        """
-        path = self._canon_path(path)
-        if path is None:
-            return False
-        return os.path.isfile(path)
-
-    def replicate(self, path, destdir, logger=None):
-        """
-        copy a file from the source bag to the same location in an output bag.
-
-        This implementation will replicate the file as a hard link if possible 
-        when self.replicate_with_hardlink is True.  Otherwise, a normal file 
-        copy is done.  
-
-        :param str path:  the path, relative to the source bag's root directory,
-                          to the file to be replicated.
-        :param str destdir:  the destination directory.  This is usually the 
-                          root directory of another bag.  
-        :param Logger logger: a logger instance to send messages to.
-        :raises ValueError:  if the given file path doesn't exist in the source
-                          bag.
-        """
-        if not self.exists(path):
-            raise ValueError("replicate: file/dir does not exist in this bag: " +
-                             path)
-        
-        destpath = os.path.join(destdir, path)
-        if self.isdir(path):
-            if not os.path.isdir(destpath):
-                if logger:
-                    logger.info("Creating matching directory in output bag: "
-                                     +path)
-                os.makedirs(destpath)
-            return
-        
-        parent = os.path.dirname(destpath)
-        hardlink = self.replicate_with_hardlink
-        source = os.path.join(self._bagdir, path)
-        
-        if not os.path.exists(parent):
-            if logger:
-                logger.debug("Creating output file's parent directory: " +
-                                  parent)
-            os.makedirs(parent)
-
-        if hardlink:
-            try:
-                os.link(source, destpath)
-            except OSError as ex:
-                hardlink = False
-                if logger:
-                    msg = "Unable to create hard link for data file (" + path + \
-                          "): " + str(ex) + "; swithching to copy mode."
-                    self.logger.warning(msg)
-
-        if not hardlink:
-            try:
-                shutil.copy(source, destpath)
-            except Exception as ex:
-                if logger:
-                    msg = "Unable to copy data file (" + path + \
-                          ") into bag (" + destdir + "): " + str(ex)
-                    self.log.exception(msg, exc_info=True)
-        
-    def open_text_file(self, path, encoding='utf-8-sig'):
-        """
-        return a open, read-only file object on the file from the source bag 
-        with the given path.
-
-        :param str path:     the path to the file to open, relative to the source
-                             bag's root directory.
-        :param str encoding  a label indicating the encoding to expect in the 
-                             file.  (Default: "utf-8-sig").
-        """
-        path = self._canon_path(path)
-        return codecs.open(path, encoding=encoding);
-
-        
-    def walk(self):
-        """
-        Walk the source bag contents returning the triplets returned by
-        os.path with two differences.  
-
-        The first difference is that the first element in the triplet,
-        the base directory, will be relative to the bag's base directory;
-        for files and directories directly below the base, the field will 
-        be an empty string.
-
-        The second difference is that the path separator will always be a 
-        forward slash ('/'), consistent with the BagIt standard.
-        """
-        for dir, subdirs, files in os.walk(self._bagdir):
-            # make dir relative to bag's root directory
-            if dir.startswith(self._bagdir):
-                dir = dir[len(self._bagdir):].lstrip(os.sep)
-            dir = _ossepre.sub('/', dir)
-            
-            yield dir, subdirs, files
-
-# _ProgenitorBagCls = type("ProgenitorBag", (Bag, LocalDirProgenitor), {})
-# _ROProgenitorBagCls = type("ROProgenitorBag", (Bag, FSProgenitor), {})
-
-class _LocalProgenitorBag(Bag, LocalDirProgenitor):
-    """
-    A BagIt bag representing the progenitor bag for a multibag aggregation
-
-    This class should not be instantiated directly; rather asProgenitor()
-    should be called.
-    """
-    pass
-
-# class ReadOnlyProgenitorBag(ReadOnlyBag, FSProgenitor):
-
-class ReadOnlyProgenitor(ProgenitorMixin):
-    """
-    An implementation of the ProgenitorMixin for a Bag that is accessible 
-    only via the ReadOnlyBag interface.  
-    """
-    is_readonly = True
-
-    def __init__(self):
-        super(ReadOnlyProgenitor, self).__init__()
-
-    def _get_bag_name(self):
-        return self._name
-
-    def exists(self, path):
-        """
-        return True if the given path exists in this bag.  
-        :param str path:  the path to test, given relative to the bag's base
-                          directory.  '/' must be used as the path delimiter.
-        """
-        if path is None:
-            return False
-        return self._root.relpath(path).exists()
-
-    def isdir(self, path):
-        """
-        return True if the given path exists as a subdirectory in the bag
-        :param path str:  the path to test, given relative to the bag's base
-                          directory.  '/' must be used as the path delimiter.
-        """
-        if path is None:
-            return False
-        return self._root.relpath(path).isdir()
-
-    def isfile(self, path):
-        """
-        return True if the given path exists as a file in the bag
-        :param str path:  the path to test, given relative to the bag's base
-                          directory.  '/' must be used as the path delimiter.
-        """
-        if path is None:
-            return False
-        return self._root.relpath(path).isfile()
-
-    def replicate(self, path, destdir, logger=None):
-        """
-        copy a file from the source bag to the same location in an output bag.
-
-        :param str path:  the path, relative to the source bag's root directory,
-                          to the file to be replicated.
-        :param str destdir:  the destination directory.  This is usually the 
-                          root directory of another bag.  
-        :param Logger logger: a logger instance to send messages to.
-        :raises ValueError:  if the given file path doesn't exist in the source
-                          bag.
-        """
-        path = _unicode(path)
-        if not self.exists(path):
-            raise ValueError("replicate: file/dir does not exist in this bag: " +
-                             path)
-
-        destfs = open_fs(destdir)
-        if self.isdir(path):
-    
-            if not destfs.isdir(path):
-                if logger:
-                    logger.info("Creating matching directory in output bag: "
-                                     +path)
-                destfs.makedirs(path, recreate=True)
-            return
-
-        parent = os.path.dirname(path)
-        if parent and not destfs.exists(parent):
-            if logger:
-                logger.debug("Creating output file's parent directory: " +
-                             parent)
-            destfs.makedirs(parent)
-
-        copy_file(self._root.fs, path, destfs, path)
-
-    def open_text_file(self, path, encoding='utf-8-sig'):
-        """
-        return a open, read-only file object on the file from the source bag 
-        with the given path.
-
-        :param str path:     the path to the file to open, relative to the source
-                             bag's root directory.
-        :param str encoding  a label indicating the encoding to expect in the 
-                             file.  (Default: "utf-8-sig").
-        """
-        return self._root.fs.open(path, encoding=encoding)
-
-    def walk(self):
-        """
-        Walk the source bag contents returning the triplets returned by
-        os.path with two differences.  
-
-        The first difference is that the first element in the triplet,
-        the base directory, will be relative to the bag's base directory;
-        for files and directories directly below the base, the field will 
-        be an empty string.
-
-        The second difference is that the path separator will always be a 
-        forward slash ('/'), consistent with the BagIt standard.
-        """
-        witer = self._root.fs.walk.walk()
-        while True:
-            root, dirs, files = next(witer)
-            root = root.lstrip('/')
-            yield root, [d.name for d in dirs], [f.name for f in files]
-
-class _ReadOnlyProgenitorBag(ReadOnlyBag, ReadOnlyProgenitor):
-    """
-    A ReadOnlyBag representing a progenitor bag for a multibag aggregation
-
-    This class should not be instantiated directly; rather asProgenitor()
-    should be called.
-    """
-    pass
-    
 def asProgenitor(bag):
     """
-    add the ProgenitorMixin interface to the given bag.  The input bag instance 
-    is returned with its class updated.
+    extend the interface on an open Bag instance so that it can be used as 
+    a progenitor bag that can be split.  
+
+    :param Bag bag:  an instance of a Bag (including ReadOnlyBag) that is 
+                     to be the source of data for a split operation.
     """
-    if not isinstance(bag, Bag):
-        raise ValueError("asProgenitor(): input not of type Bag: " + str(bag))
-
-    # already a progenitor; just return it
-    if isinstance(bag, ProgenitorMixin):
-        return bag
-
-    # input is a ReadOnlyBag, access via an fs instance (e.g. zip file, tar ball,
-    # ...).  Convert to _ReadOnlyProgenitorBag.
-    if isinstance(bag, ReadOnlyBag):
-        bag.__class__ = _ReadOnlyProgenitorBag
-        ReadOnlyProgenitor.__init__(bag)
-        return bag
-
-    # input is a normal bag
-    if not os.path.exists(os.path.join(bag.path, "bagit.txt")):
-        raise ValueError("Unsupported Bag implementation: "+str(type(bag)))
-
-    bag.__class__ = _LocalProgenitorBag
-    LocalDirProgenitor.__init__(bag, bag.path)
-    return bag
+    return as_extended(bag)
     
-
 class SplitPlan(object):
     """
     a description of how to distribute the payload and metadata files 
@@ -653,9 +198,9 @@ class SplitPlan(object):
                            name_output_bags()).  See name_output_bags() for 
                            the requirements of a naming iterator.  
         :param Logger logger: a logger instance to send messages to.
-        :return iterator: an iterator whose next() method will write the next
-                          member bag and returns its output path.  StopIteration
-                          is raised when there are no more output bags to write.
+        :rtype: an iterator whose next() method will write the next
+                member bag and returns its output path.  StopIteration
+                is raised when there are no more output bags to write.
         """
         if not self.manifests:
             if logger:
@@ -846,8 +391,8 @@ class Splitter(object):
         the logic behind the split strategy.  
 
         :param str bagpath:  the path to the the source bag's root directory
-        :return SplitPlan:   a plan that describes how the given bag should 
-                             be split into multibags.  
+        :rtype:   a SplitPlan instance that describes how the given bag should 
+                  be split into multibags.  
         """
         raise NotImplementedError()
 
@@ -862,8 +407,8 @@ class Splitter(object):
                              namebasis as a base name.  Otherwise, it is 
                              a naming iterator; see SplitPlan.name_output_bags()
                              for its requirements.
-        :return SplitPlan:   a plan that describes how the given bag should 
-                             be split into multibags.  
+        :rtype:   a SplitPlan that describes how the given bag should 
+                  be split into multibags.  
         """
         if not namebasis:
             namebasis = os.path.splitext(os.path.basename(bagpath))[0]
@@ -891,7 +436,7 @@ class Splitter(object):
                              namebasis as a base name.  Otherwise, it is 
                              a naming iterator; see SplitPlan.name_output_bags()
                              for its requirements.
-        :return [str]:  a list of the names of the output bags.
+        :rtype:  a list of str, the names of the output bags.
         """
         plan = self.plan(bagpath, namebasis)
 
