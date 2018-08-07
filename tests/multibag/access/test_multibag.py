@@ -571,6 +571,13 @@ class TestReadWriteHeadBag(test.TestCase):
         self.assertIn("data/trial2.json", dels)
         self.assertEqual(len(dels), 2)
 
+    def test_format_bytes(self):
+        self.assertEqual(self.bag._format_bytes(108), "108 B")
+        self.assertEqual(self.bag._format_bytes(34569), "34.57 kB")
+        self.assertEqual(self.bag._format_bytes(9834569), "9.835 MB")
+        self.assertEqual(self.bag._format_bytes(19834569), "19.83 MB")
+        self.assertEqual(self.bag._format_bytes(14419834569), "14.42 GB")
+
     def test_update_info(self):
         bag = Bag(self.bagdir)
         rmtag = []
@@ -624,7 +631,17 @@ class TestReadWriteHeadBag(test.TestCase):
         self.assertIn("Multibag-Reference",
                       bag.info.get('Internal-Sender-Description'))
 
-
+    def test_update_for_member(self):
+        self.clear_multibag()
+        membagdir = os.path.join(datadir, 'samplembag')
+        membag = open_bag(membagdir)
+        
+        self.bag.update_for_member(membag)
+        self.assertEqual(self.bag.member_bag_names, ['samplembag'])
+        self.assertEqual(self.bag.lookup_file("data/trial2.json"), 'samplembag')
+        self.assertEqual(self.bag.lookup_file("data/trial3/trial3a.json"),
+                         'samplembag')
+        self.assertIsNone(self.bag.lookup_file("metadata/pod.json"))
         
 
         

@@ -9,7 +9,7 @@ from collections import OrderedDict
 from .bagit import Bag, ReadOnlyBag, open_bag
 from .exceptions import MultibagError, MissingMultibagFileError
 from .extended import (ExtendedReadMixin, ExtendedReadOnlyBag,
-                       ExtendedReadWritableBag)
+                       ExtendedReadWritableBag, as_extended)
 from ..constants import CURRENT_VERSION, CURRENT_REFERENCE, Version
 
 if sys.version_info[0] > 2:
@@ -435,6 +435,89 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
                 self._filelu = OrderedDict()
         self._filelu[filepath] = bagname
 
+    def update_for_member(self, bag, include=None, exclude=None, 
+                          make_member=True, member_name=None):
+        """
+        make the given bag a member of the multibag aggregation.  
+
+        By default, this method will add the given bag to the list of member 
+        bags (unless make_member=False).  The file lookup information for this 
+        head bag will be updated according to the include and exclude parameters;
+        a file must exist in the bag for it to be added.
+
+        Note that when make_member=True (default), the order in which this 
+        method is called is significant: it affects the order in which member 
+        bags are combined to create the aggregated bag.  
+
+        :param Bag bag:       the bag to be added (or, if make_member=False, 
+                              have files from added to the file lookup 
+                              information)
+        :param list include:  a list of directories or files that should be 
+                              included.  If not provided, a default value of 
+                              ['data'] will be assumed.  Each element must be 
+                              a path relative to the bag's root directory.  If 
+                              an entry is a directory, all files under that 
+                              directory (recursively) will be included except
+                              any whose path matches an entry in the exclude
+                              list parameter.  
+        :param list exclude:  a list of files or directories to exclude.  The
+                              include list will over-ride those listed in this
+                              list, unless the corresponding include entry is a
+                              directory.
+        :param bool make_member:  If False, the bag will _not_ be added to 
+                              the member-bags list; only the file lookup 
+                              information will be updated.  Set this to False,
+                              when calling add_member_bag separately (e.g. to 
+                              provide additional member info). 
+        :param str member_name:  The name to use for the name of the member 
+                              bag.  When provided, this value over-rides the 
+                              apparent name of the bag.  
+        """
+        as_extended(bag)
+        if not member_name:
+            member_name = bag.name
+
+        if make_member:
+            self.add_member_bag(member_name)
+
+        # find the files to add to the lookup map
+        if include is None:
+            include = ['data']
+        elif isinstance(include, (str,_unicode)):
+            include = [include]
+        elif not isinstance(include, list):
+            raise TypeError("write_file_lookup(): include not a list: "+
+                            str(include))
+        if exclude is None:
+            exclude = []
+        elif isinstance(exclude, (str,_unicode)):
+            include = [exclude]
+        elif not isinstance(exclude, list):
+            raise TypeError("write_file_lookup(): exclude not a list: "+
+                            str(exclude))
+
+        for incl in include:
+            # skip this include item if it explicitly excluded
+            if incl in exclude:
+                continue
+            
+            if bag.isfile(incl):
+                self.add_file_lookup(incl, member_name)
+
+            elif bag.isdir(incl):
+                for d, subdirs, files in bag.walk(incl):
+                    if d and d in exclude:
+                        for i in range(len(subdirs)):
+                            subdirs.pop(0)
+                        continue
+                    for f in files:
+                        f = "/".join([d, f])
+                        if f in exclude:
+                            continue
+                        self.add_file_lookup(f, member_name)
+
+            # else does not exist in bag; skip it
+
     def save_file_lookup(self):
         """
         if it appears that the file lookup information has been updated, save 
@@ -449,6 +532,17 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
         with open(tagfile, 'w') as fd:
             for item in self._filelu.items():
                 fd.write("{0}\t{1}\n".format(item[0], item[1]))
+
+    def clear_file_lookup(self):
+        """
+        empty the file lookup tag file and clear all entries from memory
+        """
+        tagfile = os.path.join(self._bagdir, self.multibag_tag_dir,
+                               'file-lookup.tsv')
+        if os.path.exists(tagfile):
+            os.remove(tagfile)
+        self._filelu = None
+        
 
     def set_deleted(self, filepath):
         """
