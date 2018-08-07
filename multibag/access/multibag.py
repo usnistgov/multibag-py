@@ -631,7 +631,7 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
         while nbytes >= 10.0:
             nbytes /= 10.0
             ordr += 1
-        nbytes = str(round(nbytes, 3) * 10**ordr)
+        nbytes = "{0:.3f}".format(round(nbytes, 3) * 10**ordr)
         if '.' in nbytes:
             nbytes = re.sub(r"0+$", "", nbytes)
         if nbytes.endswith('.'):
