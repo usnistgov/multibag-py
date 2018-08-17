@@ -8,7 +8,8 @@ setup(name='multibag',
       author_email="raymond.plante@nist.gov",
       url='https://github.com/usnistgov/multibag-py',
       scripts=[ ],
-      packages=['multibag', 'multibag.access', 'multibag.validate'],
+      packages=['multibag', 'multibag.access', 'multibag.validate',
+                'multibag.testing'],
       test_suite="tests.suite",
       test_runner="unittest:TextTestRunner"
 )
