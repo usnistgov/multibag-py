@@ -7,7 +7,7 @@ import os, pdb, logging, random, math
 import tempfile, shutil
 import unittest as test
 
-import tests.multibag.access.mkdata as mkdata
+import multibag.testing.mkdata as mkdata
 
 class TestFunctions(test.TestCase):
 
