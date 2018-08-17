@@ -12,7 +12,7 @@ import multibag.access.bagit as bagit
 import multibag.access.multibag as mbag
 import multibag.validate as valid8
 from multibag.constants import CURRENT_VERSION, CURRENT_REFERENCE
-import tests.multibag.access.mkdata as mkdata
+import multibag.testing.mkdata as mkdata
 
 datadir = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                        "access", "data")
