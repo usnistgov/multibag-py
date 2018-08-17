@@ -63,7 +63,7 @@ class TestExtendedReadWritableBag(test.TestCase):
 
     def test_sizeof(self):
         self.assertEqual(self.bag.sizeof("data/trial1.json"), 69)
-        self.assertEqual(self.bag.sizeof("data"), 4096)
+        self.assertGreater(self.bag.sizeof("data"), 0)
         with self.assertRaises(OSError):
             self.bag.sizeof("data/goober")
 
