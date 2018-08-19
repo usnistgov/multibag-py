@@ -13,6 +13,7 @@ from .bagit import Bag, ReadOnlyBag
 from bagit import _parse_tags
 
 from fs.copy import copy_file
+from fs.errors import ResourceNotFound
 from fs import open_fs
 
 if sys.version_info[0] > 2:
@@ -79,6 +80,17 @@ class ExtendedReadMixin(object):
         return True if the given path exists as a file in the bag
         :param path str:  the path to test, given relative to the bag's base
                           directory.  '/' must be used as the path delimiter.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def sizeof(self, path):
+        """
+        return the size of the file in bytes located at the give path
+        :param path str:  the path to desired file, given relative to the bag's 
+                          base directory.  '/' must be used as the path 
+                          delimiter.
+        :rtype int:  the size of the file in bytes
         """
         raise NotImplementedError()
 
@@ -270,6 +282,17 @@ class _ExtendedReadWritableMixin(ExtendedReadMixin):
             return False
         return os.path.isfile(path)
 
+    def sizeof(self, path):
+        """
+        return the size of the file in bytes located at the give path
+        :param path str:  the path to desired file, given relative to the bag's 
+                          base directory.  '/' must be used as the path 
+                          delimiter.
+        :rtype int:  the size of the file in bytes
+        """
+        path = self._canon_path(path)
+        return os.stat(path).st_size
+
     def replicate(self, path, destdir, logger=None):
         """
         copy a file from the source bag to the same location in an output bag.
@@ -459,6 +482,20 @@ class _ExtendedReadOnlyMixin(ExtendedReadMixin):
         if path is None:
             return False
         return self._root.relpath(path).isfile()
+
+    def sizeof(self, path):
+        """
+        return the size of the file in bytes located at the give path
+        :param path str:  the path to desired file, given relative to the bag's 
+                          base directory.  '/' must be used as the path 
+                          delimiter.
+        :rtype int:  the size of the file in bytes
+        """
+        try:
+            info = self._root.fs.getinfo(path, namespaces=['details'])
+        except ResourceNotFound as ex:
+            raise OSError(2, "File not found: "+path)
+        return info.size
 
     def replicate(self, path, destdir, logger=None):
         """

@@ -61,6 +61,12 @@ class TestExtendedReadWritableBag(test.TestCase):
         self.assertFalse(self.bag.isfile("data/trial3"))
         self.assertFalse(self.bag.isfile("data/trial3/goober"))
 
+    def test_sizeof(self):
+        self.assertEqual(self.bag.sizeof("data/trial1.json"), 69)
+        self.assertGreater(self.bag.sizeof("data"), 0)
+        with self.assertRaises(OSError):
+            self.bag.sizeof("data/goober")
+
     def test_bag(self):
         # test that self.bag behaves like a bagit.Bag
         self.assertEqual(self.bag.algs, ["sha256"])
@@ -259,6 +265,12 @@ class TestExtendReadOnlyBag(test.TestCase):
         self.assertFalse(self.bag.isfile("data/goober"))
         self.assertFalse(self.bag.isfile("data/trial3"))
         self.assertFalse(self.bag.isfile("data/trial3/goober"))
+
+    def test_sizeof(self):
+        self.assertEqual(self.bag.sizeof("data/trial1.json"), 69)
+        self.assertEqual(self.bag.sizeof("data"), 0)
+        with self.assertRaises(OSError):
+            self.bag.sizeof("data/goober")
 
     def test_bag(self):
         # test that self.bag behaves like a bagit.Bag
