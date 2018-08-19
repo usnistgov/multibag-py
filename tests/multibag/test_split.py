@@ -132,6 +132,8 @@ class TestSplitPlan(test.TestCase):
 
         self.plan.complete_plan()
         self.assertEqual(len(self.plan._manifests), 2)
+        self.assertGreater(self.plan._manifests[-1]['totalsize'], 0)
+        self.assertEqual(self.plan._manifests[-1]['totalsize'], 208)
         for p in willmiss:
             self.assertIn(p, self.plan._manifests[-1]["contents"])
         self.assertEqual(len(self.plan._manifests[-1]["contents"]), 3)

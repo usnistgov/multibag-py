@@ -175,6 +175,10 @@ class SplitPlan(object):
                                           len(self._manifests)),
             "contents": list(self.missing())
         }
+        size = 0
+        for f in man['contents']:
+            size += self.progenitor.sizeof(f)
+        man['totalsize'] = size
         if man['contents']:
             self._manifests.append(man)
 
