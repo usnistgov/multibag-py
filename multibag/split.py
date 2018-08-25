@@ -10,6 +10,7 @@ from functools import cmp_to_key
 
 from .constants import CURRENT_VERSION as MBAG_VERSION
 from .access.bagit import Bag, ReadOnlyBag
+from .access.multibag import as_headbag, MissingMultibagFileError
 from .access.extended import as_extended, ExtendedReadMixin as ProgenitorMixin
 from bagit import _parse_tags
 
@@ -234,13 +235,18 @@ class SplitPlan(object):
 
         # multibag tag info; initialize from the progenitor bag if the
         # progenitor is a head bag itself
-        if progenitor.is_headbag():
+        filedest = OrderedDict()
+        memberbags = []
+        if self.progenitor.is_head_multibag():
             as_headbag(self.progenitor)
-            memberbags = self.progenitor.member_bags()
-            filedest = OrderedDict(self.progenitor.iter_file_lookup())
-        else:
-            filedest = OrderedDict()
-            memberbags = []
+            try:
+                memberbags = self.progenitor.member_bags()
+            except MissingMultibagFileError:
+                pass
+            try:
+                filedest = OrderedDict(self.progenitor.iter_file_lookup())
+            except MissingMultibagFileError:
+                pass
         
         for m in self.manifests():
             bagname = m.get('name')
