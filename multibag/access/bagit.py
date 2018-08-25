@@ -621,7 +621,7 @@ def open_bag(location):
         fspath = Path(fs.open_fs(location), "", location+':')
 
     elif not os.path.exists(location):
-        raise OSError(2, "File not found: "+location, location)
+        raise OSError(2, "File not found: "+location)
 
     elif os.path.isdir(location):
         # it's a unserialized bag on local disk

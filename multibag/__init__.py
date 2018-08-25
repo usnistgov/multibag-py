@@ -9,8 +9,11 @@ specification. The HeadBag class is Multibag specialization specifically for
 head bags which can be used to reconstitute the progenitor bag.  
 """
 from .split import Splitter, WellPackedSplitter, NeighborlySplitter, SplitPlan
-from .access.multibag import HeadBag, as_headbag
-from .access.bagit import open_bag
+from .access.multibag import HeadBag, as_headbag, is_headbag, open_headbag
+from .access.bagit import open_bag, BagError, BagValidationError
+from .validate import (MultibagValidationError, HeadBagValidator,
+                       MemberBagValidator, validate_headbag, validate_memberbag)
+from .amend import SingleMultibagMaker
 
 
 
