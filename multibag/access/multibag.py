@@ -152,8 +152,6 @@ class HeadBagReadMixin(ExtendedReadMixin):
         self._memberbags = None
         self._filelu = None
         self._deleted = None
-        self._mbtagdir = None
-        self.multibag_tag_dir  # caches the initial value
 
     @property
     def head_version(self):
@@ -224,7 +222,7 @@ class HeadBagReadMixin(ExtendedReadMixin):
         :param bool reread:  if True, re-read the contents of the member-bags.tsv
                              file; otherwise, return the cached values.
         """
-        if reread or not self._memberbags:
+        if reread or self._memberbags is None:
             self._memberbags = [m for m in self.iter_member_bags()]
         return self._memberbags
 
@@ -270,6 +268,24 @@ class HeadBagReadMixin(ExtendedReadMixin):
         if reread or self._filelu is None:
             self._cache_file_lookup()
         return self._filelu.get(filepath)
+
+    def files_in_member(self, bagname):
+        """
+        return a list of files in the file lookup that are registered as being
+        in the given named member bag.  An empty list if the bag is not a member
+        or otherwise has no files registered with it.  
+        """
+        out = []
+        if self._filelu is None:
+            try:
+                self._cache_file_lookup()
+            except MissingMultibagFileError:
+                return out
+
+        for file, member in self._filelu.items():
+            if member == bagname:
+                out.append(file)
+        return out
 
     def iter_deleted(self):
         """
@@ -354,16 +370,30 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
         except MissingMultibagFileError:
             return []
 
-    def add_member_bag(self, name, uri=None, comment=None, info=None):
+    def add_member_bag(self, name, uri=None, comment=None, info=None,
+                       override=True):
         """
         add a new member bag to the aggregation
+
+        :param str name:    the name of the member bag
+        :param str uri:     an optional PID for the member bag
+        :param str comment: an optional text comment to associate with the bag
+        :param info:        an list of other string data to associate with the bag
+        :type info:  list of str
+        :param bool override:  if the member bag is already listed as a member,
+                            remove it and its associated information from the 
+                            member bag list before re-adding it.  Default: True
         """
         if info is None:
             info = []
-        if not self._memberbags:
-            self.member_bags
+        if self._memberbags is None:
+            self.member_bags()
         if self._memberbags is None:
             self._memberbags = []
+
+        if override:
+            self.remove_member_bag(name)
+
         self._memberbags.append(MemberInfo(name, uri, comment, *info))
 
     def set_member_bags(self, meminfos):
@@ -434,6 +464,47 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
             except MissingMultibagFileError:
                 self._filelu = OrderedDict()
         self._filelu[filepath] = bagname
+
+    def remove_file_lookup(self, filepath):
+        """
+        remove the given file path from the file lookup.  No exception is 
+        raised if the file path is not currently registered.
+        """
+        if not filepath:
+            raise ValueError("remove_file_lookup(): empty filepath argument")
+        if self._filelu is None:
+            try:
+                self._cache_file_lookup()
+            except MissingMultibagFileError:
+                return
+        if filepath in self._filelu:
+            del self._filelu[filepath]
+
+    def remove_member_bag(self, bagname):
+        """
+        remove the bag with the given name as a member of the aggregation.
+        This bot removes the name from the member bag list and removes all
+        entries pointing to it in the file lookup map.  Any files removed
+        from the lookup map are also removed from the deleted list.
+
+        Note that for this removal to be cached, all three save methods--
+        save_member_bags(), save_file_lookup(), and save_deleted()--must be
+        subsequently called; they are not called internally by this method.
+        """
+        if self._memberbags is None:
+            self.member_bags
+
+        if self._memberbags:
+            idxs = [i for i in range(len(self._memberbags))
+                      if self._memberbags[i].name == bagname]
+            for i in reversed(idxs):
+                del self._memberbags[i]
+
+        files = self.files_in_member(bagname)
+        for f in files:
+            self.unset_deleted(f)
+            self.remove_file_lookup(f)
+        
 
     def update_for_member(self, bag, include=None, exclude=None, 
                           make_member=True, member_name=None):
@@ -558,6 +629,24 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
         if self._deleted is None:
             self._deleted = set()
         self._deleted.add(filepath)
+
+    def unset_deleted(self, filepath):
+        """
+        unregister the given filepath as being marked as deleted from the 
+        multibag aggregation.
+
+        :param str filepath:  the path to the file, relative to the bag's root
+                              directory, that should be considered deleted.  The
+                              path should be delimited by a forward slash ('/'),
+                              regardless of the platform.
+        """
+        if self._deleted is None:
+            self.deleted_paths
+        if self._deleted is None:
+            self._deleted = set()
+        if filepath in self._deleted:
+            self._deleted.remove(filepath)
+        
 
     def save_deleted(self):
         """
@@ -706,13 +795,16 @@ class HeadBag(ExtendedReadWritableBag, HeadBagUpdateMixin):
         HeadBagReadMixin.__init__(self)
         HeadBagUpdateMixin.__init__(self)
 
-def is_head_bag(bag):
+def is_headbag(bagpath):
     """
     return True if this bag is a designated as the head bag of a multibag
     aggregation.  This implementation returns True if the 
     'Multibag-Head-Version' is set.  
+
+    :param str bagpath:  the path to the bag, either as a serialized file or 
+                         as the root directory.
     """
-    return 'Multibag-Head-Version' in bag.info
+    return 'Multibag-Head-Version' in open_bag(bagpath).info
 
 def as_headbag(bag, readonly=False):
     """
@@ -751,7 +843,7 @@ def as_headbag(bag, readonly=False):
 
     return bag
 
-def open_headbag(self, location, readonly=False):
+def open_headbag(location, readonly=False):
     """
     open the head bag of a multibag aggregation.  
 
@@ -761,10 +853,17 @@ def open_headbag(self, location, readonly=False):
     MultibagError.  If the bag is not opened readonly, the update methods 
     can be used to bring it into compliance as a head bag.
 
-    :param Bag bag:        the Bag instance to extend
+    :param str location:   the path to the head bag, either as a serialized 
+                           file or as its root directory
     :param bool readonly:  do not include methods for updating the head bag
-                           data.  Note that if the input bag is of type 
-                           ReadOnlyBag (e.g. it is in a serialized form), 
-                           the update methods will not be included.
+                           data.  Note that if the input bag is serialized
+                           or referenced via a URL, the update methods will
+                           not be included.
     """
-    pass
+    if readonly or "://" in location or os.path.isfile(location):
+        out = open_bag(location)
+
+    else:
+        out = Bag(location)
+
+    return as_headbag(out)

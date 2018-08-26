@@ -33,9 +33,6 @@ class TestSplitPlan(test.TestCase):
         self.assertEqual(self.plan._manifests, [])
         self.assertIs(self.plan.progenitor, self.bag)
 
-        with self.assertRaises(ValueError):
-            split.SplitPlan(self.bagdir)
-
     def test_is_complete(self):
         self.assertFalse(self.plan.is_complete())
 

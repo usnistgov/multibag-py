@@ -266,6 +266,13 @@ class TestReadOnlyHeadBag(test.TestCase):
         self.assertEqual(self.bag.lookup_file("data/trial1.json", True),
                          "samplembag")
 
+    def test_files_in_member(self):
+        self.assertEqual(self.bag.files_in_member("samplembag"),
+  "data/trial1.json data/trial2.json data/trial3/trial3a.json metadata/pod.json"
+                         .split())
+        self.assertEqual(self.bag.files_in_member("samplembag2"),
+                         ["metadata/nerdm.json"])
+
     def test_iter_deleted(self):
         files = list(self.bag.iter_deleted())
         self.assertEqual(files, [])
@@ -445,6 +452,17 @@ class TestReadWriteHeadBag(test.TestCase):
                          ["samplembag","samplembag2", "foo3"])
         self.assertEqual(self.bag.member_bags()[-1].uri, "ivo://blah/goob")
 
+        # test adding a member bag when there are member bags saved but not
+        # cached in memory
+        self.bag.save_member_bags()
+        self.bag._memberbags = None
+        self.assertEqual(self.bag.member_bag_names,
+                         ["samplembag","samplembag2", "foo3"])
+        self.bag._memberbags = None
+        self.bag.add_member_bag("foo4")
+        self.assertEqual(self.bag.member_bag_names,
+                         ["samplembag","samplembag2", "foo3", "foo4"])
+
         self.clear_multibag()
         self.assertEqual(self.bag.member_bag_names, [])
         self.bag.add_member_bag("samplembag2")
@@ -493,6 +511,18 @@ class TestReadWriteHeadBag(test.TestCase):
         self.assertEqual(self.bag.lookup_file("data/gurn/goober.json"),
                          "samplembag2")
 
+    def test_remove_file_lookup(self):
+        self.assertEqual(self.bag.lookup_file("data/trial1.json"), "samplembag")
+        self.bag.remove_file_lookup("data/trial1.json")
+        self.assertIsNone(self.bag.lookup_file("data/trial1.json"))
+        
+        self.assertEqual(self.bag.lookup_file("data/trial1.json", reread=True),
+                         "samplembag")
+        self.bag.remove_file_lookup("data/trial1.json")
+        self.assertIsNone(self.bag.lookup_file("data/trial1.json"))
+        self.bag.save_file_lookup()
+        self.assertIsNone(self.bag.lookup_file("data/trial1.json", reread=True))
+
     def test_save_file_lookup(self):
         self.clear_multibag()
         tagdir = os.path.join(self.bagdir, "multibag")
@@ -535,6 +565,23 @@ class TestReadWriteHeadBag(test.TestCase):
         self.assertIn("data/trial1.json", dels)
         self.assertIn("data/trial2.json", dels)
         self.assertEqual(len(dels), 2)
+
+    def test_unset_deleted(self):
+        dels = self.bag.deleted_paths()
+        self.assertEqual(len(dels), 0)
+        self.bag.set_deleted("data/trial1.json")
+        self.bag.set_deleted("data/trial2.json")
+        dels = self.bag.deleted_paths()
+        self.assertIn("data/trial1.json", dels)
+        self.assertIn("data/trial2.json", dels)
+
+        self.bag.unset_deleted("data/trial1.json")
+        self.assertEqual(self.bag.deleted_paths(), ["data/trial2.json"])
+        self.bag.unset_deleted("goober")
+        self.assertEqual(self.bag.deleted_paths(), ["data/trial2.json"])
+        self.bag.unset_deleted("data/trial2.json")
+        self.assertEqual(self.bag.deleted_paths(), [])
+        
 
     def test_save_deleted(self):
         tagdir = os.path.join(self.bagdir, "multibag")
@@ -630,6 +677,21 @@ class TestReadWriteHeadBag(test.TestCase):
                                     list))
         self.assertIn("Multibag-Reference",
                       bag.info.get('Internal-Sender-Description'))
+
+    def test_remove_member_bag(self):
+        self.assertIn("samplembag", self.bag.member_bag_names)
+        self.assertEqual(self.bag.lookup_file("data/trial1.json"), "samplembag")
+        self.assertEqual(self.bag.lookup_file("data/trial2.json"), "samplembag")
+        self.assertEqual(self.bag.lookup_file("metadata/nerdm.json"),
+                         "samplembag2")
+
+        self.bag.remove_member_bag("samplembag")
+
+        self.assertNotIn("samplembag", self.bag.member_bag_names)
+        self.assertIsNone(self.bag.lookup_file("data/trial1.json"))
+        self.assertIsNone(self.bag.lookup_file("data/trial2.json"))
+        self.assertEqual(self.bag.lookup_file("metadata/nerdm.json"),
+                         "samplembag2")
 
     def test_update_for_member(self):
         self.clear_multibag()

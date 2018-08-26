@@ -10,6 +10,7 @@ from functools import cmp_to_key
 
 from .constants import CURRENT_VERSION as MBAG_VERSION
 from .access.bagit import Bag, ReadOnlyBag
+from .access.multibag import as_headbag, MissingMultibagFileError
 from .access.extended import as_extended, ExtendedReadMixin as ProgenitorMixin
 from bagit import _parse_tags
 
@@ -56,7 +57,18 @@ class SplitPlan(object):
     def __init__(self, source):
         """
         create an empty plan for splitting a given source bag
+
+        :param source:  if a str, it is the path to the source bag (serialized
+                        or not); otherwise, a Bag instance representing the 
+                        source bag.
+        :type str or Bag:
         """
+        if isinstance(source, (str, _unicode)):
+            if os.path.isfile(source):
+                source = ReadOnlyBag(source)
+            else:
+                # so that we can replicate with hard links when possible
+                source = Bag(source)
         if not isinstance(source, Bag):
             raise ValueError("SplitPlan(): source is not a Bag instance")
         if not isinstance(source, ProgenitorMixin):
@@ -211,6 +223,9 @@ class SplitPlan(object):
                 logger.warn("Requested plan execution, but no manifests are set")
             raise RuntimeError("No manifests set for output bags")
 
+        if hasattr(self.progenitor, 'replicate_with_hardlink'):
+            self.progenitor.replicate_with_hardlink = True
+
         def _write_item(fd, key, vals):
             if not isinstance(vals, list):
                 vals = [vals]
@@ -218,8 +233,20 @@ class SplitPlan(object):
                 fd.write("%s: %s\n" % (key,v))
             
 
+        # multibag tag info; initialize from the progenitor bag if the
+        # progenitor is a head bag itself
         filedest = OrderedDict()
         memberbags = []
+        if self.progenitor.is_head_multibag():
+            as_headbag(self.progenitor)
+            try:
+                memberbags = self.progenitor.member_bags()
+            except MissingMultibagFileError:
+                pass
+            try:
+                filedest = OrderedDict(self.progenitor.iter_file_lookup())
+            except MissingMultibagFileError:
+                pass
         
         for m in self.manifests():
             bagname = m.get('name')
@@ -607,7 +634,6 @@ class NeighborlySplitter(WellPackedSplitter):
             manf = self._new_manifest()
             i = 0
 
-                    
         return plan
 
     def _dirpath(self, path):
