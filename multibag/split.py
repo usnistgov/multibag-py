@@ -63,7 +63,7 @@ class SplitPlan(object):
                         source bag.
         :type str or Bag:
         """
-        if isinstance(source, str):
+        if isinstance(source, (str, _unicode)):
             if os.path.isfile(source):
                 source = ReadOnlyBag(source)
             else:
