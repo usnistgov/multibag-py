@@ -194,7 +194,7 @@ class SplitPlan(object):
         if man['contents']:
             self._manifests.append(man)
 
-    def apply_iter(self, outdir, naming_iter=None, logger=None):
+    def apply_iter(self, outdir, naming_iter=None, info_nopass=None,logger=None):
         """
         iteratively apply the plan by writing split bags to a given directory.
         This method returns an iterator that iterates through the plan 
@@ -213,6 +213,12 @@ class SplitPlan(object):
                            names (which may have been set by default or via 
                            name_output_bags()).  See name_output_bags() for 
                            the requirements of a naming iterator.  
+        :param info_nopass:  a list of bag-info metadata names from the source
+                           bag that should not be passed to the split bags.
+                           If None, all names will be transfered to the output
+                           multibags; values for some standard names will be 
+                           transformed appropriately.
+        :type  info_nopass:  list of str
         :param Logger logger: a logger instance to send messages to.
         :rtype: an iterator whose next() method will write the next
                 member bag and returns its output path.  StopIteration
@@ -225,6 +231,9 @@ class SplitPlan(object):
 
         if hasattr(self.progenitor, 'replicate_with_hardlink'):
             self.progenitor.replicate_with_hardlink = True
+
+        if not info_nopass:
+            info_nopass = []
 
         def _write_item(fd, key, vals):
             if not isinstance(vals, list):
@@ -240,7 +249,7 @@ class SplitPlan(object):
         if self.progenitor.is_head_multibag():
             as_headbag(self.progenitor)
             try:
-                memberbags = self.progenitor.member_bags()
+                memberbags = self.progenitor.member_bag_names
             except MissingMultibagFileError:
                 pass
             try:
@@ -258,6 +267,8 @@ class SplitPlan(object):
                         logger.warn("naming iterator ran out of names before "+
                                     "output bags")
                     naming_iter = None
+            if bagname in memberbags:
+                memberbags.remove(bagname)
             memberbags.append(bagname)
 
             # create the bag directory and its data subdirectory
@@ -327,6 +338,8 @@ class SplitPlan(object):
                 for name, vals in self.progenitor.info.items():
                     if name.startswith('Multibag-'):
                         continue
+                    if name in info_nopass:
+                        continue
                     
                     if not isinstance(vals, list):
                         vals = [vals]
@@ -341,6 +354,8 @@ class SplitPlan(object):
                         _write_item(fd, 'Multibag-Source-'+name, vals)
                         _write_item(fd, name, vals[0]+'/mbag:'+bagname)
                         name = 'Bag-Group-Identifier'
+                    elif name == 'Bag-Size':
+                        name = 'Multibag-Source-'+name
                     elif name == 'Payload-Oxum':
                         vals = ["%s.%s" % (payload_size, payload_count)]
 
@@ -361,7 +376,8 @@ class SplitPlan(object):
             # create the multibag files
             if m.get('ishead'):
                 mbagdir = os.path.join(bagdir, "multibag")
-                os.mkdir(mbagdir)
+                if not os.path.isdir(mbagdir):
+                    os.mkdir(mbagdir)
 
                 with open(os.path.join(mbagdir, "member-bags.tsv"), 'w') as fd:
                     for bag in memberbags:
@@ -454,7 +470,8 @@ class Splitter(object):
 
         return out
 
-    def split(self, bagpath, outdir, namebasis=None):
+    def split(self, bagpath, outdir, namebasis=None, info_nopass=None,
+              logger=None):
         """
         Split the given bag into multibags according to the strategy of this 
         splitter.  
@@ -467,12 +484,19 @@ class Splitter(object):
                              namebasis as a base name.  Otherwise, it is 
                              a naming iterator; see SplitPlan.name_output_bags()
                              for its requirements.
+        :param info_nopass:  a list of bag-info metadata names from the source
+                             bag that should not be passed to the split bags.
+                             If None, all names will be transfered to the output
+                             multibags; values for some standard names will be 
+                             transformed appropriately.
+        :type info_nopass:   list of str
+        :param Logger logger: a logger instance to send messages to.
         :rtype:  a list of str, the names of the output bags.
         """
         plan = self.plan(bagpath, namebasis)
 
         out = []
-        for mb in plan.apply_iter(outdir):
+        for mb in plan.apply_iter(outdir, info_nopass=info_nopass,logger=logger):
             ## offer option to serialize
 
             out.append(mb)
