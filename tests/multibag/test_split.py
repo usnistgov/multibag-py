@@ -198,6 +198,9 @@ class TestSplitPlan(test.TestCase):
         bag = Bag(mbagdir)
         self.assertTrue(bag.validate())
         self.assertTrue(bag.is_valid())
+        self.assertNotIn('Bag-Size', bag.info)
+        self.assertIn('Multibag-Source-Bag-Size', bag.info)
+        self.assertIn('Bagging-Date', bag.info)
 
         mbag = next(iter)
         mbagdir = os.path.join(self.tempdir, "goob_2.bag")
@@ -212,6 +215,38 @@ class TestSplitPlan(test.TestCase):
         bag = Bag(mbagdir)
         self.assertTrue(bag.validate())
         self.assertTrue(bag.is_valid())
+
+    def test_apply_iter_nopass(self):
+        manifest1 = {
+           'contents': set("about.txt metadata/pod.json metadata/trial3".split()),
+           'name': "goob_1.bag"
+        }
+        self.plan._manifests.append(manifest1)
+
+        manifest2 = {
+           'contents': set("data/trial1.json data/trial2.json data/trial3/trial3a.json".split()),
+           'name': "goob_2.bag"
+        }
+        self.plan._manifests.append(manifest2)
+
+        iter = self.plan.apply_iter(self.tempdir,
+                                    info_nopass=['Bagging-Date', 'Bag-Size'])
+        mbag = next(iter)
+        mbagdir = os.path.join(self.tempdir, "goob_1.bag")
+        self.assertEqual(mbag, mbagdir)
+        for member in manifest1['contents']:
+            self.assertTrue(os.path.exists(os.path.join(mbagdir, member)))
+        self.assertTrue(os.path.exists(os.path.join(mbagdir, "bagit.txt")))
+        self.assertTrue(os.path.exists(os.path.join(mbagdir, "bag-info.txt")))
+        self.assertTrue(os.path.exists(os.path.join(mbagdir,
+                                                    "manifest-sha256.txt")))
+
+        bag = Bag(mbagdir)
+        self.assertTrue(bag.validate())
+        self.assertTrue(bag.is_valid())
+        self.assertNotIn('Bag-Size', bag.info)
+        self.assertNotIn('Multibag-Source-Bag-Size', bag.info)
+        self.assertNotIn('Bagging-Date', bag.info)
 
 
 class TestNeighborlySplitter(test.TestCase):
