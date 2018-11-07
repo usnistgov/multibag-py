@@ -32,22 +32,15 @@ Motivation and Features
 -----------------------
 
 
-Using the ``multibag`` package
-------------------------------
+Getting Started With ``multibag``
+---------------------------------
 
+.. toctree::
+   :maxdepth: 1
 
-API Reference
--------------
-
-.. autosummary::
-   :toctree: generated
-
-   multibag
-   multibag.split
-   multibag.amend
-   multibag.validate
-   multibag.testing
-   multibag.access
+   install
+   using
+   ref
 
 
 Indices and tables

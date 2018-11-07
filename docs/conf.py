@@ -20,7 +20,7 @@
 # -- Project information -----------------------------------------------------
 
 project = u'Multibag-Py'
-copyright = u'2018, Raymond L. Plante'
+# copyright = u'2018, Raymond L. Plante'
 author = u'Raymond L. Plante'
 
 # The short X.Y version
