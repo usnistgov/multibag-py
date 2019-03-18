@@ -1,6 +1,8 @@
 .. _multibag-using:
 
-.. _Multibag Profile Specification: https://github.com/usnistgov/multibag-py/blob/apidoc/docs/multibag-profile-spec.md
+.. _Multibag Profile specification: https://github.com/usnistgov/multibag-py/blob/apidoc/docs/multibag-profile-spec.md
+.. _BagIt specification: https://tools.ietf.org/html/rfc8493
+.. _bagit python package: https://github.com/LibraryOfCongress/bagit-python
 
 ******************
 Using ``multibag``
@@ -9,15 +11,46 @@ Using ``multibag``
 .. toctree::
    :maxdepth: 2
 
+Most of the main functionality of multibag package are available
+at its top level; thus, you can access it by importing ``multibag``::
+
+  import multibag
+
+When you installed the multibag package, you also get the vanilla
+`bagit python package, bagit`_, which you can use independently.  
+
+
 The multibag data model
 =======================
 
 The multibag data model is a simple extension of the standard data
-model for a BagIt-compliant bag.  In this model, we define a multibag
-aggregation as a set of one or more bags that contain files that, as a
-whole, represent a coherent collection.  Each bag in the aggregation
-is compliant with the base BagIt standard; furthermore, the bags can
-be combined to create a single, compliant bag.
+model for a BagIt-compliant bag.  That is, a *bag* is a directory
+containing:
+
+  * a ``data`` subdirectory which contains the main data files that
+    make up a collection--called the *payload*.  This files can have
+    arbitrary names and arranged in an arbitrary directory hierarchy.
+
+  * a ``bagit.txt`` file that identifies the directory as a *bag*
+
+  * a ``bag-info.txt`` that contains human readable metadata about the
+    the collection.
+
+  * a ``manifest-``:emphasis:`alg`:code:`.txt` file (where *alg* is a checksum
+    algorithm label like ``sha256``) that lists checksum values for
+    files in the payload.
+
+The `BagIt specification`_ defines other files that can be included in
+bag that provide additional functionality.  Further, the specification
+allows of any other files to be included that are not meaningful to
+the base specification; this allows for the definition of BagIt
+profiles like Multibag.
+
+The multibag model builds on the base BagIt model.  In it, we define a
+multibag aggregation as a set of one or more bags that contain files
+that, as a whole, represent a coherent collection.  Each bag in the
+aggregation is compliant with the base BagIt standard; furthermore,
+the bags can be combined to create a single, compliant bag.
 
 One of the bags in the aggregation is designated the *head bag*.  This
 bag contains extra metadata for interpreting the collection as a
@@ -33,7 +66,7 @@ multibag aggregation.  In particular,
     contains each file in the collection.
 
 (See  `Multibag Profile Specification`_ for details on the syntax for
-these profile tags.)
+these and other profile tags.)
 
 To create a new version of the collection, one creates a new head bag
 and zero or more additional member bags.  These new bags contain new files
@@ -53,10 +86,65 @@ the aggregation will be listed in multiple head bags.
 Creating test data collections
 ==============================
 
-If you are just trying out the ``multibag`` package, it helps to have some data
+If you are just trying out the ``multibag`` package, it helps to have some data 
 collections of various sizes to work with.  The package includes a module,
-:mod:`multibag.testing`, that can create "fake" data collections made up files
-of various sizes and organized into various subdirectories.
+:mod:`multibag.testing.mkdata`, that can create "fake" data collections made
+up of files of various sizes and organized into various subdirectories.
+
+The simplest way to create a directory with a bunch of files in it is with the
+:py:func:`~multibag.testing.mkdata.mkdataset`  function:
+
+.. code-block:: python
+
+   import multibag.testing.mkdata as mkdata
+   mkdata.mkdataset("datadir", totalsize=10000000, filecount=20)
+
+This will create in the current directory a subdirectory called ``datadir``.
+It will contain 20 500-kB files (for a combined total size of 10 MB).  If you
+look inside ``datadir``, you'll see that the files have names made up of a
+number is that is its size in bytes plus a random string.  The contents of the
+file are just lines of character data.
+
+You can create more complicated arrangements of fake data.  For example, 
+you may want your data directory to contain subdirectories.  Here's one way to
+do that:
+
+.. code-block:: python
+
+   mkdata.mkdataset("datadir2", totalsize=10000000, filecount=20,
+                    plan={ 'files': [
+                              { "totalsize": 500000, "totalfiles": 2 }
+                           ],
+                           'dirs': [
+                              { "totalsize": 500000, "totalfiles": 10 },
+                              { "totalfiles": 90 }
+                           ]} )
+
+This time, ``datadir2`` will contain...
+
+   * 2 files, 250 kB each
+   * a subdirectory (with a random name) containing 10 files, 50 kB each
+   * a second subdirectory containing 90 files, 100 kB each
+
+The ``plan`` argument allows for a variety of ways to distribute data any
+number of directories and files; see the
+:py:mod:`~multibag.testing.mkdata`  module documentation for the full
+explanation of the plan description syntax.
+
+As you will see if you run the above examples,
+:py:func:`~multibag.testing.mkdata.mkdataset` just creates a directory with
+data files in it.  If you want a quick-and-dirty way to turn this directory
+into a BagIt bag is with the ``make_bag()`` function from the
+`bagit python package`_:
+
+.. code-block:: python
+
+   import bagit
+   bagit.make_bag("datadir")
+
+This will tranform ``datadir`` into a legal bag; in particular, all of the fake
+data files you created with ``mkdataset()`` will now be in a ``data``
+subdirectory.  
 
 Creating multibag aggregations
 ==============================

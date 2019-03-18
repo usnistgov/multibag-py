@@ -7,6 +7,9 @@ def additional_tests():
     import tests.multibag.testing as testing
     import tests.multibag as multibag
 
-    suites = [access.additional_tests(), validate.additional_tests(),
-              multibag.additional_tests(), testing.additional_tests()]
+    suites = [TestLoader().loadTestsFromModule(m[1])
+                     for m in globals().items() if m[0].startswith("test_")]
+    
+    suites.extend( [access.additional_tests(), validate.additional_tests(),
+                    multibag.additional_tests(), testing.additional_tests()] )
     return TestSuite(suites)
