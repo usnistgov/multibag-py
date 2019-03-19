@@ -1,5 +1,6 @@
 .. _multibag-using:
 
+.. _Multibag Profile: https://github.com/usnistgov/multibag-py/blob/apidoc/docs/multibag-profile-spec.md
 .. _Multibag Profile specification: https://github.com/usnistgov/multibag-py/blob/apidoc/docs/multibag-profile-spec.md
 .. _BagIt specification: https://tools.ietf.org/html/rfc8493
 .. _bagit python package: https://github.com/LibraryOfCongress/bagit-python
@@ -148,6 +149,32 @@ subdirectory.
 
 Creating multibag aggregations
 ==============================
+
+In this section, we look at three scenarios multibag aggregations:
+
+1. **Turning a single bag into a single-multibag aggregation.**  Here we are
+   creating an aggregation that is compliant with the `Multibag Profile`_,
+   but which contains only one member bag.  In this scenario, the multibag
+   metadata are added to the existing bag to turn it into a head bag.  
+   You may wish to do this when preparing the bag for future amendments
+   (under scenario 3 below); this is not required in order to make
+   amendments, but it provides consistency to your repository of bags, 
+   allowing you to access bag content in a consistent way (using the
+   multibag paradigm).
+
+2. **Splitting a large bag into a multibag aggregation.**  This applies a
+   customizable algorithm for splitting files across multiple output bags
+   in which one will be set up as the head bag.  In the algorithms included
+   in this package, you can set a maximum size for each member bag, such
+   that if the source bag is less than that size, no splitting is done:  
+   instead, a single-multibag aggregation is created (as in scenario 1, 
+   above.
+
+3. **Amending an aggreation with additional multibags.**  This scenario
+   applies when creating a new version of the aggregation in which contents 
+   (be it payload data or metadata) are updated or added to.  A new head
+   bag is created plus zero or more additional bags (depending on the
+   splitting algorithm).  
 
 
 Creating a single-multibag aggregation
