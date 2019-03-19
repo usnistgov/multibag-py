@@ -162,13 +162,17 @@ In this section, we look at three scenarios multibag aggregations:
    allowing you to access bag content in a consistent way (using the
    multibag paradigm).
 
+.. p
+
 2. **Splitting a large bag into a multibag aggregation.**  This applies a
    customizable algorithm for splitting files across multiple output bags
    in which one will be set up as the head bag.  In the algorithms included
    in this package, you can set a maximum size for each member bag, such
    that if the source bag is less than that size, no splitting is done:  
    instead, a single-multibag aggregation is created (as in scenario 1, 
-   above.
+   above).
+ 
+.. p
 
 3. **Amending an aggreation with additional multibags.**  This scenario
    applies when creating a new version of the aggregation in which contents 
@@ -179,6 +183,32 @@ In this section, we look at three scenarios multibag aggregations:
 
 Creating a single-multibag aggregation
 --------------------------------------
+
+You can take any legal BagIt bag into a Multibag-compliant head bag for a 
+single-bag aggregation (itself being the only member) using the
+:py:func:`~multibag.amend.make_single_multibag` function:
+
+.. code-block:: python
+
+   multibag.make_single_multibag(datadir)
+
+This will update update the bag "in place", inserting the necessary metadata
+required by the Multibag profile.  Alternatively, while converting, you can
+specify a version string and a persistent identifier that you wish to assign
+to the bag:
+
+.. code-block:: python
+
+   multibag.make_single_multibag(datadir, version="1.0.1", pid="doi:00000/XXXX")
+
+When these extra parameters are not provided, the version is set to "1" and no
+identifier is set.  If a resolvable identifier is being assigned, it should 
+resolve to the bag itself (or a serialized form of it).
+
+This function uses the :py:class:`~multibag.amend.SingleMultibagMaker` class to
+do the work: after intantiation, it calls its ``convert()`` function.  You can
+use the the class directly if you want to control the conversion via its other
+public functions.
 
 
 Splitting a large bag into a multibag aggregation

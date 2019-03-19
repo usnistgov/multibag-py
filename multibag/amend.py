@@ -38,10 +38,11 @@ class SingleMultibagMaker(object):
     bag for a single-bag aggregation.
 
     The conversion can be done most easily by instantiating this class and 
-    calling the convert() method.  This method calls write_member_bags(), 
-    write_file_lookup(), and update_info() in sequence.  For greater control
+    calling the :py:meth:`convert` method.  This method calls 
+    :py:meth:`write_member_bags`, :py:meth:`write_file_lookup`, and 
+    :py:meth:`update_info` in sequence.  For greater control
     over this conversion--namely, to control which files are included in the 
-    file-lookup.tsv file (by default, only the data payload files are 
+    ``file-lookup.tsv`` file (by default, only the data payload files are 
     included)--one can call these latter method oneself.  See the documentation
     for the individual methods for more information.  
     """
@@ -63,6 +64,7 @@ class SingleMultibagMaker(object):
         write the member-bags.tsv file for a single-bag aggregation.  The 
         PID, if provided, should be set to resolve to this bag (usually a
         serialized form for it).
+
         :param str pid:  Persistent ID to associate with this bag.
         :raises OSError: if there is a failure to open the output file or
                          otherwise write the data.  
@@ -114,8 +116,9 @@ class SingleMultibagMaker(object):
     def convert(self, version="1", pid=None):
         """
         convert the attached bag to single multibag aggregation.  This calls, 
-        in succession, write_member_bags(), write_file_lookup(), 
-        and update_info() to complete the conversion.  
+        in succession, :py:meth:`write_member_bags`, 
+        :py:meth:`write_file_lookup`, and :py:meth:`update_info` to complete 
+        the conversion.  
 
         :param str version:  a version string to set as the version of the 
                              aggregation.  

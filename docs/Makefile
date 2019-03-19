@@ -6,6 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = ../build
+APIDOC        = sphinx-apidoc
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -13,7 +14,10 @@ help:
 
 .PHONY: help Makefile
 
+generated/multibag.rst:
+	@$(APIDOC) -o generated ../multibag
+
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
+%: Makefile generated/multibag.rst
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
