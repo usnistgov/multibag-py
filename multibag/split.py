@@ -34,6 +34,58 @@ if sys.version_info[0] > 2:
 else:
     _unicode = unicode
 
+def split_bag(srcbag, outnamebase=None, maxsize=60000, targetsize=None,
+              forhead=None, method="wellpacked"):
+    """
+    Split a source bag into a multibag aggregation.  This function will 
+    write out 1 or more bags that together contain all of the contents in
+    the source bag.  The output bags will have names of the form 
+    *outnamebase_N*, where *N* is a sequence number starting with 1.  
+    
+    :param str srcbag:  the path to the source bag.  The bag can be serialized
+                        with ``srcbag`` pointing to a file; otherwise, 
+                        ``srcbag`` points to the bag's root directory.
+    :param str outnamebase:  a base name or path that the names of the output 
+                        bags should be based on.  A sequence number will be 
+                        appended to the base to form the output bag name.
+                        If not provided, the base will be the same as the 
+                        srcbag name.  
+    :param int maxsize: the maximum size of an output bag given in bytes.
+    :param int targetsize:  the preferred size of an output bag.  Bags will 
+                        be packed until they just exceed this fize by one
+                        file.  The total size will still be kept less than 
+                        maxsize. 
+    :param forhead:      a list of file paths that should be reserved 
+                         for the head bag.  
+    :type forhead: list of str
+    :param str method:  one of ["wellpacked", "neighborly"], indicatating 
+                        the splitting algorithm to use.  These correspond 
+                        to the :py:class:`WellPackedSplitter` and 
+                        :py:class:`NeighborlySplitter` classes, respectively; 
+                        see their class documentation for details.
+    :return:  a list of str, the names of the output bags.
+    """
+    if not outnamebase:
+        outnamebase = os.path.basename(srcbag)
+    outdir = os.path.dirname(outnamebase)
+    if not outdir:
+        outdir = '.'
+
+    splitters = {
+        "wellpacked": WellPackedSplitter,
+        "neighborly": NeighborlySplitter
+    }
+    if not method:
+        method = "wellpacked"
+    try:
+        splitcls = splitters[method]
+    except KeyError as ex:
+        raise ValueError("unsupported method: "+method)
+
+    splitter = splitcls(maxsize, targetsize, forhead)
+    return splitter.split(srcbag, outdir, outnamebase)
+    
+
 def asProgenitor(bag):
     """
     extend the interface on an open Bag instance so that it can be used as 
@@ -220,9 +272,9 @@ class SplitPlan(object):
                            transformed appropriately.
         :type  info_nopass:  list of str
         :param Logger logger: a logger instance to send messages to.
-        :rtype: an iterator whose next() method will write the next
-                member bag and returns its output path.  StopIteration
-                is raised when there are no more output bags to write.
+        :return: an iterator whose next() method will write the next
+                 member bag and returns its output path.  StopIteration
+                 is raised when there are no more output bags to write.
         """
         if not self.manifests:
             if logger:
@@ -438,7 +490,7 @@ class Splitter(object):
         the logic behind the split strategy.  
 
         :param str bagpath:  the path to the the source bag's root directory
-        :rtype:   a SplitPlan instance that describes how the given bag should 
+        :return:  a SplitPlan instance that describes how the given bag should 
                   be split into multibags.  
         """
         raise NotImplementedError()
@@ -454,7 +506,7 @@ class Splitter(object):
                              namebasis as a base name.  Otherwise, it is 
                              a naming iterator; see SplitPlan.name_output_bags()
                              for its requirements.
-        :rtype:   a SplitPlan that describes how the given bag should 
+        :return:  a SplitPlan that describes how the given bag should 
                   be split into multibags.  
         """
         if not namebasis:
@@ -491,7 +543,7 @@ class Splitter(object):
                              transformed appropriately.
         :type info_nopass:   list of str
         :param Logger logger: a logger instance to send messages to.
-        :rtype:  a list of str, the names of the output bags.
+        :return:  a list of str, the names of the output bags.
         """
         plan = self.plan(bagpath, namebasis)
 
@@ -522,8 +574,9 @@ class WellPackedSplitter(Splitter):
                              be packed until they just exceed this fize by one
                              file.  The total size will still be kept less than 
                              maxsize. 
-        :param list[str] forhead:  a list of file paths that should be reserved 
+        :param forhead:      a list of file paths that should be reserved 
                              for the head bag.  
+        :type forhead: list of str
         """
         self.maxsz = maxsize
         if not targetsize:
@@ -597,11 +650,12 @@ class WellPackedSplitter(Splitter):
             'totalsize': 0
         }
         
-    _special = [re.compile(r) for r in
+    _specialf = [re.compile(r) for r in
                        r"^/bagit.txt$ ^/bag-info.txt$ ^/fetch.txt$".split() +
                        r"^/(tag)?manifest-(\w+).txt$".split()]
+    
     def _is_special(self, filename):
-        for r in self._special:
+        for r in self._specialf:
             if r.match(filename):
                 return True
         return False
@@ -714,9 +768,21 @@ class NeighborlySplitter(WellPackedSplitter):
 class SimpleNamer(object):
     """
     A simple naming iterator that creates names for output multibags made up 
-    of a given base name and a sequence number.
+    of a given base name and a sequence number.  This iterator will never run
+    out of names; thus, it will never raise ``StopIteration``.  
+
+    The names returned by :py:meth:`next` will be of the form, 
+    :emphasis:`base_N`:code:`.mbag`, where *N* is the integer sequence number.  
+
+    This naming iterator is used by default in this module when one is not 
+    specified.
     """
     def __init__(self, base):
+        """
+        create the naming iterator with a given base.
+
+        :param str base:  the base file name to use with each output name.  
+        """
         self.base = base
         self.sn = 0
 

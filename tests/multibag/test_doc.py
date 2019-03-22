@@ -7,6 +7,7 @@ import os, pdb, logging, random, math
 import tempfile, shutil
 import unittest as test
 
+import multibag
 import multibag.testing.mkdata as mkdata
 import bagit
 
@@ -22,7 +23,6 @@ class TestCreateTestData(test.TestCase):
         datadir = os.path.join(self.tempdir, "datadir")
         self.assertTrue(not os.path.exists(datadir))
         
-        import multibag.testing.mkdata as mkdata
         mkdata.mkdataset(datadir, totalsize=10000000, filecount=20)
 
         self.assertTrue(os.path.exists(datadir))
@@ -74,7 +74,6 @@ class TestCreateTestData(test.TestCase):
         datadir = os.path.join(self.tempdir, "datadir")
         self.assertTrue(not os.path.exists(datadir))
         
-        import multibag.testing.mkdata as mkdata
         mkdata.mkdataset(datadir, totalsize=10000000, filecount=20)
 
         self.assertTrue(os.path.exists(datadir))
@@ -92,10 +91,33 @@ class TestCreateTestData(test.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(datadir,"data",f)))
         self.assertEqual(len(files), len(os.listdir(os.path.join(datadir,"data"))))
 
+    def test_make_single_bag(self):
+        bagdir = os.path.join(self.tempdir, "bagdir")
+        mkdata.mkdataset(bagdir, totalsize=10000000, filecount=20)
+        bagit.make_bag(bagdir)
+        self.assertTrue(not os.path.isdir(os.path.join(bagdir,"multibag")))
+
+        multibag.make_single_multibag(bagdir)
+        self.assertTrue(os.path.isdir(os.path.join(bagdir,"multibag")))
+        
+    def test_split_bag(self):
+        bagdir = os.path.join(self.tempdir, "bagdir")
+        mkdata.mkdataset(bagdir, totalsize=10000000, filecount=20)
+        bagit.make_bag(bagdir)
+        self.assertTrue(not os.path.isdir(os.path.join(bagdir,"multibag")))
+
+        bags = multibag.split_bag("mybag", "mymultibag", 10000001)
+        self.assertEqual(len(bags), 11)
+        self.assertTrue(all([re.match(r'mymultibag_\d+$', os.path.basename(b))
+                             for b in bags]))
+        self.assertIn(bagdir+"_11", bags)
+        self.assertNotIn(bagdir+"_12", bags)
+        self.assertNotIn(bagdir+"_0", bags)
+
+        self.assertTrue(all([os.stat(b).st_size < 10000001 for b in bags]))
+
 
         
-        
-
         
         
         

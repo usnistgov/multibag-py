@@ -190,16 +190,16 @@ single-bag aggregation (itself being the only member) using the
 
 .. code-block:: python
 
-   multibag.make_single_multibag(datadir)
+   multibag.make_single_multibag("bagdir")
 
-This will update update the bag "in place", inserting the necessary metadata
-required by the Multibag profile.  Alternatively, while converting, you can
-specify a version string and a persistent identifier that you wish to assign
-to the bag:
+This will update the bag represented by the directory, `bagdir` "in
+place", inserting the necessary metadata required by the Multibag profile.
+Alternatively, while converting, you can specify a version string and a
+persistent identifier that you wish to assign to the bag:
 
 .. code-block:: python
 
-   multibag.make_single_multibag(datadir, version="1.0.1", pid="doi:00000/XXXX")
+   multibag.make_single_multibag("bagdir", version="1.0.1", pid="doi:00000/XXXX")
 
 When these extra parameters are not provided, the version is set to "1" and no
 identifier is set.  If a resolvable identifier is being assigned, it should 
@@ -213,6 +213,43 @@ public functions.
 
 Splitting a large bag into a multibag aggregation
 -------------------------------------------------
+
+The simplest way to a large bag into an multibag aggregation of smaller bags is
+with the :py:func"`~multibag.split.split_bag` function:
+
+.. code-block:: python
+
+   multibag.split_bag("mybag", "mymultibag", 100000000)
+
+This splits the original source bag with the root directory name, ``mybag``
+(also referred to as the *progenitor* bag) into a set of output
+multibags where none exceed the maximum size of 100 MB.  The output files will
+have root directory names, ``mymultibag_1``, ``mymultibag_2``, and so on.
+
+You can take tighter control of the process and output bag naming by using a 
+:py:class:`~multibag.split.Splitter` class to do the splitting.  A
+:py:class:`~multibag.split.Splitter` figures out how to distribute the files
+from the original source (or *progenitor*) bag into the output multibags and
+captures that as a *split plan*.  It can then execute that plan.
+
+:py:class:`~multibag.split.Splitter` is an abstract class as there can be
+different ways to split up the files.  The multibag package comes with two
+implementations, capturing two slightly different algortithms:
+
+* :py:class:`~multibag.split.WellPackedSplitter` -- this algorithm sets a
+  target size for each bag in the output aggregation and distributes the
+  files so as to minimize the number of output bags by packing them as close
+  as close to the target size as possible.
+
+* :py:class:`~multibag.split.NeighborlySplitter` -- this algorithm is a 
+  variation on :py:class:`~multibag.split.WellPackedSplitter`, except it 
+  tries to keep files that are close together in the progenitor bag's hierarchy
+  in the same output bag.
+
+Of course, other algorithms that optimize for a particular bag producer's needs
+can enabled by implementing the :py:class:`~multibag.split.Splitter` class.
+
+
 
 
 Amending an aggregation with additional multibags
