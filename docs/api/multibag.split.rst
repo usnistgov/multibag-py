@@ -40,6 +40,7 @@ Module Classes
 .. autoclass:: multibag.split.Splitter
    :members:
    :undoc-members:
+   :private-members: _create_plan
    :special-members: __init__, __next__, __iter__
    :show-inheritance:
 

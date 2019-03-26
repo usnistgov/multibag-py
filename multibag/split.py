@@ -254,8 +254,8 @@ class SplitPlan(object):
         manifests; with each call to its next() method, it writes out the next
         multibag member bag to the output directory and returns a full path to 
         the member.  Each member bag is given a name set either by default, 
-        or as set by a previous call to name_output_bags(), or via a naming 
-        iterator provided as an argument to this method.  
+        or as set by a previous call to :py:meth:`name_output_bags`, or via a 
+        naming iterator provided as an argument to this method.  
 
         The caller is allowed to modify the newly written bag between calls to
         the iterator--e.g. to serialize it or move it to other storage.  
@@ -264,8 +264,9 @@ class SplitPlan(object):
         :param iter naming_iter:  a naming iterator to use to name the bags.  If
                            None, the output bags will retain their currently set
                            names (which may have been set by default or via 
-                           name_output_bags()).  See name_output_bags() for 
-                           the requirements of a naming iterator.  
+                           :py:meth:`name_output_bags`).  See 
+                           :py:meth:`name_output_bags` for the requirements of a 
+                           naming iterator.  
         :param info_nopass:  a list of bag-info metadata names from the source
                            bag that should not be passed to the split bags.
                            If None, all names will be transfered to the output
@@ -464,15 +465,15 @@ class SplitPlan(object):
 
 class Splitter(object):
     """
-    an abstract class for algorithms that can create a SplitPlan given a 
-    source bag.  
+    an abstract class for algorithms that can create a :py:class:`SplitPlan` 
+    given a source bag.  
 
     A Splitter subclass captures a particular strategy for distributing the 
     files found in a source bag into a set of output multibags.  To create a
     Splitter implementation, one would subclass this abstract base class and 
     over-ride the abstract `_create_plan()` function.  This function captures
-    the essential logic of the strategy and uses it to create SplitPlan tailored
-    to a given source bag.  
+    the essential logic of the strategy and uses it to create 
+    :py:class:`SplitPlan` tailored to a given source bag.  
     """
     __metaclass__ = ABCMeta
 
@@ -485,30 +486,31 @@ class Splitter(object):
     @abstractmethod
     def _create_plan(self, bagpath):
         """
-        Create a SplitPlan for the given source bag and apply this splitter's 
-        strategy for spliting it into multibags.  Not intended for calling 
-        publicly, this function is called by plan() and is intended to contain
-        the logic behind the split strategy.  
+        Create a :py:class:`SplitPlan` for the given source bag and apply this 
+        splitter's strategy for spliting it into multibags.  Not intended for 
+        calling publicly, this function is called by :py:meth:`plan` and is 
+        intended to contain the logic behind the split strategy.  
 
         :param str bagpath:  the path to the the source bag's root directory
-        :return:  a SplitPlan instance that describes how the given bag should 
-                  be split into multibags.  
+        :return:  a :py:class:`SplitPlan` instance that describes how the given 
+                  bag should be split into multibags.  
         """
         raise NotImplementedError()
 
     def plan(self, bagpath, namebasis=None):
         """
         Apply this splitter's strategy for spliting a source bag into multibags
-        and return the result as a SplitPlan instance.  
+        and return the result as a :py:class:`SplitPlan` instance.  
 
         :param str bagpath:  the path to the the source bag's root directory
         :param str|iter namebasis:  a guide for naming the output files.  If 
                              a str, a default naming scheme is applied using 
                              namebasis as a base name.  Otherwise, it is 
-                             a naming iterator; see SplitPlan.name_output_bags()
+                             a naming iterator; see 
+                             :py:meth:`SplitPlan.name_output_bags`
                              for its requirements.
-        :return:  a SplitPlan that describes how the given bag should 
-                  be split into multibags.  
+        :return:  a :py:class:`SplitPlan` that describes how the given bag 
+                  should be split into multibags.  
         """
         if not namebasis:
             namebasis = os.path.splitext(os.path.basename(bagpath))[0]
@@ -535,7 +537,8 @@ class Splitter(object):
         :param str|iter namebasis:  a guide for naming the output files.  If 
                              a str, a default naming scheme is applied using 
                              namebasis as a base name.  Otherwise, it is 
-                             a naming iterator; see SplitPlan.name_output_bags()
+                             a naming iterator; see 
+                             :py:meth:`SplitPlan.name_output_bags`
                              for its requirements.
         :param info_nopass:  a list of bag-info metadata names from the source
                              bag that should not be passed to the split bags.
