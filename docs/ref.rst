@@ -6,7 +6,7 @@ API Reference
 
 
 .. autosummary::
-   :toctree: generated
+   :toctree: api
 
    multibag
    multibag.split
@@ -14,4 +14,5 @@ API Reference
    multibag.validate
    multibag.testing
    multibag.access
+   multibag.constants
 

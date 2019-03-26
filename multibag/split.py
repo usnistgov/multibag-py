@@ -59,7 +59,7 @@ def split_bag(srcbag, outnamebase=None, maxsize=60000, targetsize=None,
                          for the head bag.  
     :type forhead: list of str
     :param str method:  one of ["wellpacked", "neighborly"], indicatating 
-                        the splitting algorithm to use.  These correspond 
+                        the splitting strategy to use.  These correspond 
                         to the :py:class:`WellPackedSplitter` and 
                         :py:class:`NeighborlySplitter` classes, respectively; 
                         see their class documentation for details.
@@ -103,7 +103,7 @@ class SplitPlan(object):
 
     The plan is specific to a given source bag, and when it's complete, it 
     can be applied to the source bag to create the output multibags via 
-    the `apply_iter()` function.  
+    the :py:meth:`apply_iter` function.  
     """
 
     def __init__(self, source):
@@ -200,6 +200,7 @@ class SplitPlan(object):
         A naming iterator is an iterator that emits a sequence of bag names
         that should be given to the output multibag names.  Thse names will
         be attached to the manifests.  
+
         :param iter naming_iter:   an iterator whose next() method emits a 
                                    sequence of bag names.
         :param bool reverse:       if True, the names should be assigned to 
@@ -225,8 +226,8 @@ class SplitPlan(object):
     def complete_plan(self):
         """
         if there are any files missing from the current set of manifests (as 
-        determined by missing()), add one or more additional manifests to the 
-        plan to capture the missing files.  If no files are missing, this 
+        determined by :py:func:`missing`), add one or more additional manifests 
+        to the plan to capture the missing files.  If no files are missing, this 
         method returns without changing the current plan; thus, there is no 
         harm in calling it.
 

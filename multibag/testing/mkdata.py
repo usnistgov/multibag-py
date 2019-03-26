@@ -312,7 +312,8 @@ class SizeIterator(object):
         return an iterator that returns sizes, ending when limits (set by 
         target_totalsize, target_totalfiles, and perhaps other constraints) 
         are reached.
-        :raise RuntimeError  if the iterator requires a target total size or 
+
+        :raise RuntimeError: if the iterator requires a target total size or 
                              number of files to work.
         """
         raise NotImplementedError()
@@ -390,12 +391,13 @@ def create_file(destfile, size):
     """
     create a file of a given size.  The file created will be filled with ascii
     text, formatted into lines of 100 bytes or less.
+
     :param str destfile:  the path to output file to create.  Its parent 
                           directory must exist; if the file exists, it will
                           be overwritten.
     :param int size:      the number of bytes to fill it with.
-    :return int:     the actual size of the file in bytes that was created (as
-                     measured by os.stat()).  
+    :return:         **int** -- the actual size of the file in bytes that was 
+                     created (as measured by ``os.stat()``).  
     :raise OSError:  if the parent directory does not exist or permissions
                      prevent writing the file.
     """

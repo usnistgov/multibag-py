@@ -108,7 +108,7 @@ class ValidationIssue(object):
     @property
     def comments(self):
         """
-        return a tuple of strings giving comments about the issue that are
+        a tuple of strings giving comments about the issue that are
         context-specific to its application
         """
         return tuple(self._comm)
