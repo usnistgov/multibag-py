@@ -3,7 +3,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import os, pdb, logging, random, math
+import os, pdb, logging, random, math, re
 import tempfile, shutil
 import unittest as test
 
@@ -104,20 +104,59 @@ class TestCreateTestData(test.TestCase):
         bagdir = os.path.join(self.tempdir, "bagdir")
         mkdata.mkdataset(bagdir, totalsize=10000000, filecount=20)
         bagit.make_bag(bagdir)
-        self.assertTrue(not os.path.isdir(os.path.join(bagdir,"multibag")))
+        self.assertTrue(os.path.isdir(bagdir))
 
-        bags = multibag.split_bag("mybag", "mymultibag", 10000001)
-        self.assertEqual(len(bags), 11)
-        self.assertTrue(all([re.match(r'mymultibag_\d+$', os.path.basename(b))
+        outbags = os.path.join(self.tempdir, "mymultibag")
+
+        bags = multibag.split_bag(bagdir, outbags, 1000000)
+        self.assertEqual(len(bags), 10)
+        self.assertTrue(all([re.match(r'mymultibag_\d+.mbag$',
+                                      os.path.basename(b))
                              for b in bags]))
-        self.assertIn(bagdir+"_11", bags)
-        self.assertNotIn(bagdir+"_12", bags)
-        self.assertNotIn(bagdir+"_0", bags)
+        self.assertIn(outbags+"_10.mbag", bags)
+        self.assertNotIn(outbags+"_11.mbag", bags)
+        self.assertNotIn(outbags+"_0.mbag", bags)
 
         self.assertTrue(all([os.stat(b).st_size < 10000001 for b in bags]))
 
+    def test_use_splitter(self):
+        bagdir = os.path.join(self.tempdir, "mybag")
+        mkdata.mkdataset(bagdir, totalsize=10000000, filecount=20)
+        bagit.make_bag(bagdir)
+        self.assertTrue(not os.path.isdir(os.path.join(bagdir,"multibag")))
 
+        # create a splitter that limits bag sizes to 2 MB each
+        splitter = multibag.WellPackedSplitter(2000000)
+
+        # create the plan
+        splitplan = splitter.plan(bagdir)
+                     
+        sizes = [m['totalsize'] for m in splitplan.manifests()]
+        self.assertEqual(len(sizes), 5)
+        self.assertTrue(all([s == 2000000 for s in sizes]))
         
+        # print the expected output bag sizes:
+        # print([m['totalsize'] for m in splitplan.manifests()])
+                     
+        # create the output bags, zipping them up as they are created
+        n = 0
+        for outbag in splitplan.apply_iter(self.tempdir):
+            n += 1
+            self.assertTrue(os.path.isdir(outbag))
+            
+            # outbag was just created             
+            if os.system("zip -qr {0}.zip {0}".format(outbag)):
+                print("{0}: Failed to serialize with zip".format(outbag))
+                continue
+            self.assertTrue(os.path.isfile(outbag+".zip"))
+            try:
+                shutil.rmtree(outbag)
+                self.assertTrue(not os.path.isdir(outbag))
+            except OSError as ex:
+                print("{0}: Failed to remove bag after serialization: {1}"
+                      .format(outbag, str(ex)))
+        
+        self.assertEqual(n, len(sizes))
         
         
         

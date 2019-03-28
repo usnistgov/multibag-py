@@ -215,7 +215,7 @@ Splitting a large bag into a multibag aggregation
 -------------------------------------------------
 
 The simplest way to a large bag into an multibag aggregation of smaller bags is
-with the :py:func"`~multibag.split.split_bag` function:
+with the :py:func:`~multibag.split.split_bag` function:
 
 .. code-block:: python
 
@@ -247,11 +247,55 @@ implementations, capturing two slightly different algortithms:
   in the same output bag.
 
 Of course, other algorithms that optimize for a particular bag producer's needs
-can enabled by implementing the :py:class:`~multibag.split.Splitter` class.
+can be enabled by implementing the :py:class:`~multibag.split.Splitter` class.
 
+a :py:class:`~multibag.split.Splitter` encapsulates a particular strategy for
+splitting bags: once instantiated, it can be applied any number of source
+bags.  It does this by first creating a :py:class:`~multibag.split.SplitPlan`
+for a given source bag; this is an object that creates a list of
+manifests--that is, file paths from the source bag--where each manifest
+represents the contents of each of the output multibags.  The plan is then
+iteratively executed to create the output multibags.  The
+:py:class:`~multibag.split.Splitter` interface gives you access to these 
+steps in case, say, you wish to manipulate the plan before or as you execute it.
+For example, as each output bag is produced, you can serialize it (e.g. into a
+zip file) or move to other storage before creating the next one.  
 
+Here's an example of using the :py:class:`~multibag.split.Splitter` interface
+directly:
 
+.. code-block:: python
 
+   from __future__ import print_function
+   import os, shutil, bagit, multibag
+
+   # make a bag with some fake data, total size of 10 MB
+   import multibag.testing.mkdata as mkdata
+   mkdata.mkdataset("mybag", totalsize=10000000, filecount=20)
+   bagit.make_bag("mybag")
+
+   # create a splitter that limits bag sizes to 2 MB each
+   splitter = multibag.WellPackedSplitter(2000000)
+
+   # create the plan
+   splitplan = splitter.plan("mybag")
+                
+   # print the expected output bag sizes: 
+   print([m['totalsize'] for m in splitplan.manifests()])
+                
+   # create the output bags, zipping them up as they are created
+   for outbag in splitplan.apply_iter('.'):
+       # outbag was just created             
+       if not os.system("zip -r {0}.zip {0}".format(outbag)):
+           print("{0}: Failed to serialize with zip: {1}".format(outbag))
+           continue
+       try:
+           shutil.rmtree(outbag)
+       except OSError as ex:
+           print("{0}: Failed to remove bag after serialization: {1}"
+                 .format(outbag, str(ex)))
+       
+   
 Amending an aggregation with additional multibags
 -------------------------------------------------
 
