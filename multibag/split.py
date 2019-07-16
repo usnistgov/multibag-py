@@ -2,7 +2,7 @@
 Tools for splitting a single bag (a ProgenitorBag) into a set of 
 Multibag-compliant bags.
 """
-import os, sys, re, shutil, codecs
+import os, sys, re, shutil, io
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
@@ -239,7 +239,7 @@ class SplitPlan(object):
             if not isinstance(vals, list):
                 vals = [vals]
             for v in vals:
-                fd.write("%s: %s\n" % (key,v))
+                fd.write(u"%s: %s\n" % (key,v))
             
 
         # multibag tag info; initialize from the progenitor bag if the
@@ -333,7 +333,7 @@ class SplitPlan(object):
                     
             # create the bag-info file
             outinfo = os.path.join(bagdir, "bag-info.txt")
-            with open(outinfo, 'w') as fd:
+            with io.open(outinfo, 'w', encoding='utf-8') as fd:
                 _write_item(fd, 'Multibag-Version', MBAG_VERSION)
                 for name, vals in self.progenitor.info.items():
                     if name.startswith('Multibag-'):
@@ -379,14 +379,17 @@ class SplitPlan(object):
                 if not os.path.isdir(mbagdir):
                     os.mkdir(mbagdir)
 
-                with open(os.path.join(mbagdir, "member-bags.tsv"), 'w') as fd:
+                with io.open(os.path.join(mbagdir, "member-bags.tsv"),
+                             'w', encoding='utf-8') as fd:
                     for bag in memberbags:
-                        fd.write(bag)
-                        fd.write('\n')
-                with open(os.path.join(mbagdir, "file-lookup.tsv"), 'w') as fd:
+                        fd.write(u"%s" % bag)
+                        fd.write(u'\n')
+                with io.open(os.path.join(mbagdir, "file-lookup.tsv"),
+                             'w', encoding='utf-8') as fd:
                     for f in filedest:
-                        fd.write("%s\t%s\n" % (f, filedest[f]))
-                with open(os.path.join(mbagdir, "aggregation-info.txt"), 'w') as fd:
+                        fd.write(u"%s\t%s\n" % (f, filedest[f]))
+                with io.open(os.path.join(mbagdir, "aggregation-info.txt"),
+                             'w', encoding='utf-8') as fd:
                     with self.progenitor.open_text_file("bag-info.txt") as ifd:
                         for f in ifd:
                             fd.write(f)
@@ -403,11 +406,11 @@ class SplitPlan(object):
         manpath = os.path.join(outdir, manfile)
         if not os.path.exists(manpath):
             open(manpath, 'w').close()
-        with open(manpath, 'a') as fd:
+        with io.open(manpath, 'a', encoding='utf-8') as fd:
             fd.write(hash)
-            fd.write(' ')
+            fd.write(u' ')
             fd.write(path)
-            fd.write('\n')
+            fd.write(u'\n')
 
 class Splitter(object):
     """

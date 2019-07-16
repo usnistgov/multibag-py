@@ -3,7 +3,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import os, pdb, logging
+import os, pdb, logging, io
 import tempfile, shutil
 import unittest as test
 from functools import cmp_to_key
@@ -22,6 +22,13 @@ class TestSplitPlan(test.TestCase):
         shutil.copytree(os.path.join(datadir, "samplembag"), self.bagdir)
         shutil.rmtree(os.path.join(self.bagdir, "multibag"))
         os.mkdir(os.path.join(self.bagdir, "metadata", "trial3"))
+
+        # add a line to the bag-info.txt that will require encoding
+        with io.open(os.path.join(self.bagdir,"bag-info.txt"),
+                     'a', encoding='utf-8') as fd:
+            fd.write(u"Funny-Characters: ")
+            fd.write('ß')
+            fd.write(u"\n")
 
         self.bag = split.asProgenitor(Bag(self.bagdir))
         self.plan = split.SplitPlan(self.bag)
