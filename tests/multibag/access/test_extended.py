@@ -136,6 +136,8 @@ class TestExtendedReadWritableBag(test.TestCase):
         self.assertEqual(contents, [("data/trial3", [], ['trial3a.json'])])
 
         contents = list(self.bag.walk("data"))
+        for d in contents:
+            d[2].sort()
         self.assertEqual(len(contents), 2)
         self.assertEqual(contents[0], ("data", ["trial3"],
                                        ['trial1.json', 'trial2.json']))
