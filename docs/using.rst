@@ -190,7 +190,7 @@ single-bag aggregation (itself being the only member) using the
 
 .. code-block:: python
 
-   multibag.make_single_multibag("bagdir")
+   multibag.amend.make_single_multibag("bagdir")
 
 This will update the bag represented by the directory, `bagdir` "in
 place", inserting the necessary metadata required by the Multibag profile.
@@ -199,7 +199,7 @@ persistent identifier that you wish to assign to the bag:
 
 .. code-block:: python
 
-   multibag.make_single_multibag("bagdir", version="1.0.1", pid="doi:00000/XXXX")
+   multibag.amend.make_single_multibag("bagdir", version="1.0.1", pid="doi:00000/XXXX")
 
 When these extra parameters are not provided, the version is set to "1" and no
 identifier is set.  If a resolvable identifier is being assigned, it should 
