@@ -84,7 +84,7 @@ class SplitPlan(object):
         prescribe the contents of each output multibag.
         """
         if len(self._manifests) == 0:
-            raise StopIteration()
+            return
         
         i = 0
         while i < len(self._manifests):

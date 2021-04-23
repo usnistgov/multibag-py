@@ -294,7 +294,7 @@ class HeadBagReadMixin(ExtendedReadMixin):
         parseline = parse_deleted_line_04
         delfile = "/".join([self.multibag_tag_dir, 'deleted.txt'])
         if not self.exists(delfile):
-            raise StopIteration()
+            return
         
         with self.open_text_file(delfile) as fd:
             for line in fd:
