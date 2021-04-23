@@ -198,7 +198,7 @@ class HeadBagReadMixin(ExtendedReadMixin):
         MemberInfo instances.
         """
         mbdir = self.info.get('Multibag-Tag-Directory', 'multibag')
-        vers = Version(self.version)
+        vers = Version(self.profile_version)
         membagfile = (vers < "0.3" and "group-members.txt") \
                       or "member-bags.tsv"
         membagpath = "/".join([mbdir, membagfile])

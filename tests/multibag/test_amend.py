@@ -334,6 +334,7 @@ class TestAmender(test.TestCase):
                                    "member-bags.tsv")
         self.assertTrue(not os.path.exists(membagsfile))
 
+        self.amender._init_multibag_info()
         self.amender._init_member_bags()
         self.assertTrue(not os.path.exists(membagsfile))
         self.assertEqual(self.amender._newhead.member_bag_names, ["samplembag"])
@@ -350,6 +351,7 @@ class TestAmender(test.TestCase):
                                    "member-bags.tsv")
         self.assertTrue(not os.path.exists(membagsfile))
 
+        self.amender._init_multibag_info()
         self.amender._init_member_bags()
         self.assertTrue(not os.path.exists(membagsfile))
         self.assertEqual(self.amender._newhead.member_bag_names, ["gooberbag"])
@@ -367,6 +369,7 @@ class TestAmender(test.TestCase):
                                    "member-bags.tsv")
         self.assertTrue(os.path.exists(membagsfile))
 
+        self.amender._init_multibag_info()
         self.amender._init_member_bags()
         self.assertTrue(not os.path.exists(membagsfile))
         self.assertEqual(self.amender._newhead.member_bag_names, ["gooberbag"])
@@ -377,6 +380,7 @@ class TestAmender(test.TestCase):
         self.assertTrue(not os.path.exists(lufile))
         self.assertIsNone(self.amender._newhead.lookup_file("data/trial1.json"))
 
+        self.amender._init_multibag_info()
         self.amender._init_file_lookup()
         self.assertTrue(not os.path.exists(lufile))
         self.assertEqual(self.amender._newhead.lookup_file("data/trial1.json"),
@@ -395,6 +399,7 @@ class TestAmender(test.TestCase):
         self.assertTrue(not os.path.exists(lufile))
         self.assertIsNone(self.amender._newhead.lookup_file("data/trial1.json"))
 
+        self.amender._init_multibag_info()
         self.amender._init_file_lookup()
         self.assertTrue(not os.path.exists(lufile))
         self.assertEqual(self.amender._newhead.lookup_file("data/trial1.json"),
@@ -413,6 +418,7 @@ class TestAmender(test.TestCase):
                               "file-lookup.tsv")
         self.assertTrue(os.path.exists(lufile))
 
+        self.amender._init_multibag_info()
         self.amender._init_file_lookup()
         self.assertTrue(not os.path.exists(lufile))
         self.assertEqual(self.amender._newhead.lookup_file("data/trial1.json"),
@@ -420,8 +426,11 @@ class TestAmender(test.TestCase):
 
     def test_init_multibag_info(self):
         self.assertNotIn('Multibag-Head-Deprecates', self.amender._newhead.info)
+        self.assertNotIn('Multibag-Version', self.amender._newhead.info)
         
         self.amender._init_multibag_info()
+        self.assertEqual(self.amender._newhead.info.get('Multibag-Version'),
+                                                        amend.CURRENT_VERSION)
         self.assertEqual(
             self.amender._newhead.info.get('Multibag-Head-Deprecates'),
             ["1.0"])

@@ -194,7 +194,7 @@ class Amender(object):
         :param amendee:   the old head bag of an existing aggregation (or 
                           a single traditional bag)
         :type amendee:    Bag instance or str path to the bag
-        :param str amendment:  a bag that is to become the new of the amended
+        :param str amendment:  a bag that is to become the new head of the amended
                           aggregation.  This must be given as the str path 
                           to the bag's root directory.
         """
@@ -211,15 +211,21 @@ class Amender(object):
         self._comm = comment
         self._info = list(info)
 
-    def init_from_amendee(self):
+    def init_from_amendee(self, keepprofver=False):
         """
         Pull information from the amendee bag to initialize the multibag
         information in the new target head bag.
+
+        :param bool keepprofver:  if True, the profile version for the new 
+                                  target head bag will be set to that of the 
+                                  amendee bag; otherwise (default), it will 
+                                  set to that of the latest version supported 
+                                  by this module.
         """
 
+        self._init_multibag_info(keepprofver)
         self._init_member_bags()
         self._init_file_lookup()
-        self._init_multibag_info()
 
     def _init_member_bags(self):
         target = os.path.join(self._newheaddir, self._newhead.multibag_tag_dir,
@@ -254,7 +260,12 @@ class Amender(object):
             # just add the files under 'data'
             self._newhead.update_for_member(self._oldhead, make_member=False)
 
-    def _init_multibag_info(self):
+    def _init_multibag_info(self, keepprofver=False):
+        profver = CURRENT_VERSION
+        if keepprofver and 'Multibag-Version' in self._oldhead.info:
+            profver = self._oldhead.info['Multibag-Version']
+        self._newhead.info['Multibag-Version'] = profver
+            
         if 'Multibag-Head-Deprecates' in self._oldhead.info:
             if isinstance(self._oldhead.info['Multibag-Head-Deprecates'], list):
                 self._newhead.info['Multibag-Head-Deprecates'] = \
@@ -333,7 +344,7 @@ class Amender(object):
 
         self._newhead.save_member_bags()
         self._newhead.save_file_lookup()
-        self._newhead.update_info(version)
+        self._newhead.update_info(version, self._newhead.profile_version)
 
         
     
