@@ -574,9 +574,12 @@ class _ExtendedReadOnlyMixin(ExtendedReadMixin):
 
         witer = root.fs.walk.walk()
         while True:
-            base, dirs, files = next(witer)
-            base = '/'.join([start, base.lstrip('/')]).strip('/')
-            yield base, [d.name for d in dirs], [f.name for f in files]
+            try: 
+                base, dirs, files = next(witer)
+                base = '/'.join([start, base.lstrip('/')]).strip('/')
+                yield base, [d.name for d in dirs], [f.name for f in files]
+            except StopIteration:  # see PEP0479 for supporting 3.7+
+                return
 
 class ExtendedReadOnlyBag(ReadOnlyBag, _ExtendedReadOnlyMixin):
     """
