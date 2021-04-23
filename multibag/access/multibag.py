@@ -198,7 +198,7 @@ class HeadBagReadMixin(ExtendedReadMixin):
         MemberInfo instances.
         """
         mbdir = self.info.get('Multibag-Tag-Directory', 'multibag')
-        vers = Version(self.version)
+        vers = Version(self.profile_version)
         membagfile = (vers < "0.3" and "group-members.txt") \
                       or "member-bags.tsv"
         membagpath = "/".join([mbdir, membagfile])
@@ -294,7 +294,7 @@ class HeadBagReadMixin(ExtendedReadMixin):
         parseline = parse_deleted_line_04
         delfile = "/".join([self.multibag_tag_dir, 'deleted.txt'])
         if not self.exists(delfile):
-            raise StopIteration()
+            return
         
         with self.open_text_file(delfile) as fd:
             for line in fd:

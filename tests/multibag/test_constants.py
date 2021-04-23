@@ -14,7 +14,11 @@ class TestVersion(test.TestCase):
     def test_ctor(self):
         ver = cnsts.Version("3.3.5.0")
         self.assertEqual(ver._vs, "3.3.5.0")
-        self.assertEqual(ver.fields, ['3','3','5','0'])
+        self.assertEqual(ver.fields, [3, 3, 5, 0])
+
+        ver = cnsts.Version((3, 3, 5, 0))
+        self.assertEqual(ver._vs, "3.3.5.0")
+        self.assertEqual(ver.fields, (3, 3, 5, 0))
 
     def testEQ(self):
         ver = cnsts.Version("3.3.0")
