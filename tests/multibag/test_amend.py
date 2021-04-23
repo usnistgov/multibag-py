@@ -378,7 +378,6 @@ class TestAmender(test.TestCase):
         lufile = os.path.join(self.amender._newheaddir,"multibag",
                               "file-lookup.tsv")
         self.assertTrue(not os.path.exists(lufile))
-        self.assertIsNone(self.amender._newhead.lookup_file("data/trial1.json"))
 
         self.amender._init_multibag_info()
         self.amender._init_file_lookup()
@@ -397,7 +396,6 @@ class TestAmender(test.TestCase):
         lufile = os.path.join(self.amender._newheaddir,"multibag",
                               "file-lookup.tsv")
         self.assertTrue(not os.path.exists(lufile))
-        self.assertIsNone(self.amender._newhead.lookup_file("data/trial1.json"))
 
         self.amender._init_multibag_info()
         self.amender._init_file_lookup()
@@ -477,7 +475,6 @@ class TestAmender(test.TestCase):
         lufile = os.path.join(self.amender._newheaddir,"multibag",
                               "file-lookup.tsv")
         self.assertTrue(not os.path.exists(lufile))
-        self.assertIsNone(self.amender._newhead.lookup_file("data/trial1.json"))
         self.assertNotIn('Multibag-Head-Deprecates', self.amender._newhead.info)
 
         self.amender.init_from_amendee()

@@ -18,7 +18,9 @@ else:
     _unicode = unicode
 _spre = re.compile(r' +')
 
-ABOUT_MBAG = "This bag complies with the Multibag BagIt profile.  For more information, refer to the URL given by Multibag-Reference tag."
+_about_mbag_morsel = "complies with the Multibag BagIt profile"
+ABOUT_MBAG = "This bag {0}.  For more information, refer to the URL given by Multibag-Reference tag." \
+             .format(_about_mbag_morsel)
 
 class MemberInfo(object):
     """
@@ -238,7 +240,7 @@ class HeadBagReadMixin(ExtendedReadMixin):
         iterate through the contents of the multibag/file-lookup.tsv
         """
         mbdir = self.info.get('Multibag-Tag-Directory', 'multibag')
-        vers = Version(self.version)
+        vers = Version(self.profile_version)
         membagfile = (vers < "0.3" and "group-directory.txt") \
                       or "file-lookup.tsv"
         membagpath = "/".join([mbdir, membagfile])
@@ -687,7 +689,8 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
             if not isinstance(self.info['Internal-Sender-Description'], list):
                 self.info['Internal-Sender-Description'] = \
                                 [ self.info['Internal-Sender-Description'] ]
-            self.info['Internal-Sender-Description'].append( ABOUT_MBAG )
+            if not any([(_about_mbag_morsel in p) for p in self.info['Internal-Sender-Description']]):
+                self.info['Internal-Sender-Description'].append( ABOUT_MBAG )
         else:
             self.info['Internal-Sender-Description'] = ABOUT_MBAG
 
