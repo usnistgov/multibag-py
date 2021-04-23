@@ -67,6 +67,10 @@ class SingleMultibagMaker(object):
         :raises OSError: if there is a failure to open the output file or
                          otherwise write the data.  
         """
+        # set the info necessary for updating the member bag listing
+        if not self.bag.info.get('Multibag-Version'):
+            self.update_info();
+        
         bagname = os.path.basename(self.bagdir)
         mi = MemberInfo(bagname, pid, comment, *info)
         self.bag.set_member_bags([mi])
@@ -95,6 +99,10 @@ class SingleMultibagMaker(object):
                               file if necessary); if True, discard any existing
                               content of the file-lookup.tsv before adding paths.
         """
+        # set the info necessary for updating the file-lookup listing
+        if not self.bag.info.get('Multibag-Version'):
+            self.update_info();
+        
         if trunc:
             self.bag.clear_file_lookup()
 
