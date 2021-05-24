@@ -167,9 +167,13 @@ class HeadBagReadMixin(ExtendedReadMixin):
     def profile_version(self):
         """
         the version of the multbag profile specification that this head bag 
-        claims to adhere to.  
+        claims to adhere to.  If the bag does not yet specify its profile version,
+        the latest supported version will be assumed and returned.  
         """
-        return self._get_required_info_item('Multibag-Version')
+        try:
+            return self._get_required_info_item('Multibag-Version')
+        except MultibagError as ex:
+            return CURRENT_VERSION
 
     def _get_required_info_item(self, name):
         try:
@@ -559,14 +563,14 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
         elif isinstance(include, (str,_unicode)):
             include = [include]
         elif not isinstance(include, list):
-            raise TypeError("write_file_lookup(): include not a list: "+
+            raise TypeError("update_for_member(): include not a list: "+
                             str(include))
         if exclude is None:
             exclude = []
         elif isinstance(exclude, (str,_unicode)):
             include = [exclude]
         elif not isinstance(exclude, list):
-            raise TypeError("write_file_lookup(): exclude not a list: "+
+            raise TypeError("update_for_member(): exclude not a list: "+
                             str(exclude))
 
         for incl in include:
