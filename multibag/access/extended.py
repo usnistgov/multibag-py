@@ -6,8 +6,9 @@ class which can read serialized versions of bags.
 """
 from __future__ import absolute_import
 import os, sys, re, shutil, codecs, inspect
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from abc import ABCMeta, abstractmethod
+from datetime import datetime, tzinfo
 
 from .bagit import Bag, ReadOnlyBag
 from bagit import _parse_tags
@@ -25,6 +26,12 @@ else:
 
 _bagsepre = re.compile(r'/')
 _ossepre = re.compile(os.sep)
+
+FileTimes = namedtuple('FileTimes', "ctime mtime atime".split())
+def _d2e(dt):
+    if not isinstance(dt, datetime):
+        return dt
+    return (dt - datetime(1970, 1, 1, tzinfo=dt.tzinfo)).total_seconds()
 
 class ExtendedReadMixin(object):
     """
@@ -91,6 +98,14 @@ class ExtendedReadMixin(object):
                           base directory.  '/' must be used as the path 
                           delimiter.
         :rtype int:  the size of the file in bytes
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def timesfor(self, path):
+        """
+        return the timestamps associated with a file or directory with the given path.
+        :rtype: FileTimes named tuple
         """
         raise NotImplementedError()
 
@@ -292,6 +307,15 @@ class _ExtendedReadWritableMixin(ExtendedReadMixin):
         """
         path = self._canon_path(path)
         return os.stat(path).st_size
+
+    def timesfor(self, path):
+        """
+        return the timestamps associated with a file or directory with the given path.
+        :rtype: FileTimes named tuple
+        """
+        path = self._canon_path(path)
+        st = os.stat(path)
+        return FileTimes(ctime=st.st_ctime, mtime=st.st_mtime, atime=st.st_atime)
 
     def replicate(self, path, destdir, logger=None):
         """
@@ -496,6 +520,17 @@ class _ExtendedReadOnlyMixin(ExtendedReadMixin):
         except ResourceNotFound as ex:
             raise OSError(2, "File not found: "+path)
         return info.size
+
+    def timesfor(self, path):
+        """
+        return the timestamps associated with a file or directory with the given path.
+        :rtype: FileTimes named tuple
+        """
+        try:
+            info = self._root.fs.getinfo(path, namespaces=['details'])
+        except ResourceNotFound as ex:
+            raise OSError(2, "File not found: "+path)
+        return FileTimes(ctime=_d2e(info.created), mtime=_d2e(info.modified), atime=_d2e(info.accessed))
 
     def replicate(self, path, destdir, logger=None):
         """

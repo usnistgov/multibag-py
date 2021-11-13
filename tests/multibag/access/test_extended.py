@@ -67,6 +67,22 @@ class TestExtendedReadWritableBag(test.TestCase):
         with self.assertRaises(OSError):
             self.bag.sizeof("data/goober")
 
+    def test_timesfor(self):
+        times = self.bag.timesfor("data/trial1.json")
+        self.assertIsNotNone(times)
+        self.assertGreater(times.ctime, 0)
+        self.assertGreater(times.mtime, 0)
+        self.assertGreater(times.atime, 0)
+
+        times = self.bag.timesfor("data")
+        self.assertIsNotNone(times)
+        self.assertGreater(times.ctime, 0)
+        self.assertGreater(times.mtime, 0)
+        self.assertGreater(times.atime, 0)
+
+        with self.assertRaises(OSError):
+            self.bag.timesfor("data/goober")
+
     def test_bag(self):
         # test that self.bag behaves like a bagit.Bag
         self.assertEqual(self.bag.algs, ["sha256"])
@@ -273,6 +289,22 @@ class TestExtendReadOnlyBag(test.TestCase):
         self.assertEqual(self.bag.sizeof("data"), 0)
         with self.assertRaises(OSError):
             self.bag.sizeof("data/goober")
+
+    def test_timesfor(self):
+        times = self.bag.timesfor("data/trial1.json")
+        self.assertIsNotNone(times)
+        self.assertIsNone(times.ctime)
+        self.assertIsNone(times.atime)
+        self.assertGreater(times.mtime, 0)
+
+        times = self.bag.timesfor("data")
+        self.assertIsNotNone(times)
+        self.assertIsNone(times.ctime)
+        self.assertIsNone(times.atime)
+        self.assertGreater(times.mtime, 0)
+
+        with self.assertRaises(OSError):
+            self.bag.timesfor("data/goober")
 
     def test_bag(self):
         # test that self.bag behaves like a bagit.Bag
