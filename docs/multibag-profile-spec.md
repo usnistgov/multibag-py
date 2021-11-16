@@ -1,5 +1,7 @@
 # The Multibag BagIt Profile
 
+Version 0.5
+
 __Contents__
 * [Overview](#Overview)
 * [The Multibag Data Structure](#The_Multibag_Data_Structure)
@@ -310,7 +312,7 @@ from the aggregation.
 
 _This section is normative._
 
-It must always be possible, in principle, to combine all of the bags in a Multibag aggregation into a single BagIt-compliant bag (barring storage and compute resource limitations) by following the process detailed in this section.  The `member-bags.tsv` file lists the member bags in an aggregation in the order which they must be combined.  
+It must always be possible, in principle, to combine all of the bags in a Multibag aggregation into a single BagIt-compliant bag (barring storage and compute resource limitations) by following the process detailed in this section.  Other methods that produce the same end result may be used; however, this method defines the end-result.  The `member-bags.tsv` file lists the member bags in an aggregation in the order which they must be combined.  
 
 An application MUST be able to combine a Multibag aggregation into a single bag by following the these steps:
 
@@ -322,7 +324,7 @@ An application MUST be able to combine a Multibag aggregation into a single bag 
    directory structure. In this process, updated versions of files MAY
    overwrite deprecated versions (with the exception of the
    BagIt-specific files, `bagit.txt`, `bag-info.txt`, `fetch.txt` and
-   the manifests, which must be handled separately. 
+   the manifests, which must be handled separately). 
    1. The special BagIt-specific files for the combined bag should be reconstituted according to the following rules:
       <dl>
           <dt> 4.1. <code>bagit.txt</code> </dt>
@@ -340,7 +342,7 @@ An application MUST be able to combine a Multibag aggregation into a single bag 
                Directory</a>), that file should be installed as the
                <code>bag-info.txt</code> file for the aggregated bag.  The
                application may make additional changes to file
-               afterward.  In particular, the application may update
+               later.  In particular, the application may update
                the <code>Payload-Oxum</code> and <code>Bag-Size</code>
                fields to ensure their values are correct for the 
                aggregated bag.</p>
@@ -359,7 +361,7 @@ An application MUST be able to combine a Multibag aggregation into a single bag 
                       All remaining values associated with a given
                       field name then over-ride all previous values with the 
                       same name.  Tag data with names not previously 
-                      encountered in this process are added to aggregated 
+                      encountered in this process are added to the aggregated 
                       tag data.  </li>
                  <li> After the data from the last bag (the Head Bag)
                       has been merged, all tag data from the excepted list 
@@ -407,8 +409,12 @@ An application MUST be able to combine a Multibag aggregation into a single bag 
           <dd> A manifest file for the aggregated bag, for each
                algorithm represented, must be the union of the same
                manifest files (type and algorithm) of all of the
-               member bags.   </dd>
+               member bags but excluding the files listed in the
+               <code>deleted.txt</code> file.   </dd>
       </dl>
+   1. The `multibag` tag directory should be removed.
+   1. If the aggregated bag is to be Bagit-compliant, the `bag-info.txt` file should be updated to reset
+      the `Payload-Oxum` and `Bag-Size` tags to values applicable to the aggregated bag.  
       
 Other BagIt profiles may specify rules for reconstituting other tag files from versions in the member bags.  In the absence of such rules, applications should assume assume that versions in the member bags listed later should replace those listed earlier. 
 
@@ -446,6 +452,11 @@ Multibag component was spun off to create its verison 0.2.
    * The rules for setting the contents of the special BagIt files
      (`bagit.txt`, `bag-info.txt`, `fetch.txt`, and the manifests) are
      spelled out.
+
+## Since 0.4
+
+   * The algorithm for "Combining Multibags Into a Single Bag" was
+     adjusted to account for the presence of a `deleted.txt` file.  
 
 ## To do
 
