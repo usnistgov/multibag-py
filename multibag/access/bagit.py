@@ -5,6 +5,7 @@ etc.).
 """
 from __future__ import absolute_import
 import os, sys
+from collections import OrderedDict
 import fs.osfs, fs.zipfs, fs.tarfs
 
 import bagit as _bagit
@@ -137,13 +138,18 @@ class ReadOnlyBag(_bagit.Bag):
     instead of instantiating this class directly.
     """
 
-    def __init__(self, bagpath, name=None):
+    def __init__(self, bagpath, name=None, location=None):
         """
         open the bag with the given location
         :param bagpath:  either a Path instance or a filepath to the bag's 
                          root directory.  A Path instance must be used if the 
                          bag is in a serialized form.  
         :type bagpath:   str or Path
+        :param str name:  the name of bag (i.e. its nominal base directory); if None
+                          the name will be the basename for the given bagpath
+        :param str location:  the location of the bag; this can be provided when bagpath
+                          is a Path instance to specify the source location of the Path's 
+                          filesystem.
         """
         if not bagpath:
             raise BagError(_("path to bag root directory not provided"))
@@ -151,6 +157,8 @@ class ReadOnlyBag(_bagit.Bag):
             bagpath = bagpath.rstrip("/")
             parent = os.path.dirname(bagpath) or "."
             bagname = os.path.basename(bagpath)
+            if not location:
+                location = bagpath
             bagpath = Path(fs.osfs.OSFS(parent), _unicode(bagname), parent+"/")
 
         if not name:
@@ -158,9 +166,11 @@ class ReadOnlyBag(_bagit.Bag):
         self._name = name
         self._root = bagpath.subfspath()
 
-        path = _unicode("/"+self._name)
-        if path == "/":
-            path = "//" # super __init__ will strip trailing /
+        path = location
+        if not path:
+            path = _unicode("/"+self._name)
+            if path == "/":
+                path = "//" # super __init__ will strip trailing /
         super(ReadOnlyBag, self).__init__(path)
 
     def __str__(self):
@@ -327,7 +337,7 @@ class ReadOnlyBag(_bagit.Bag):
                     yield url, file_size, filename
 
     def _load_manifests(self):
-        self.entries = {}
+        self.entries = OrderedDict()
         manifests = list(self.manifest_files())
 
         if self.version_info >= (0, 97):
@@ -394,7 +404,7 @@ class ReadOnlyBag(_bagit.Bag):
                             }
                         )
 
-                    entry_hashes = self.entries.setdefault(entry_path, {})
+                    entry_hashes = self.entries.setdefault(entry_path, OrderedDict())
 
                     if alg in entry_hashes:
                         warning_ctx = {'bag': self, 'algorithm': alg, 'filename': entry_path}
@@ -653,5 +663,5 @@ def open_bag(location):
     if not fspath:
         raise ValueError("open_bag: unsupported bag type/location: "+location)
 
-    return ReadOnlyBag(fspath, name)
+    return ReadOnlyBag(fspath, name, location)
 

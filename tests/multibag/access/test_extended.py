@@ -67,6 +67,22 @@ class TestExtendedReadWritableBag(test.TestCase):
         with self.assertRaises(OSError):
             self.bag.sizeof("data/goober")
 
+    def test_timesfor(self):
+        times = self.bag.timesfor("data/trial1.json")
+        self.assertIsNotNone(times)
+        self.assertGreater(times.ctime, 0)
+        self.assertGreater(times.mtime, 0)
+        self.assertGreater(times.atime, 0)
+
+        times = self.bag.timesfor("data")
+        self.assertIsNotNone(times)
+        self.assertGreater(times.ctime, 0)
+        self.assertGreater(times.mtime, 0)
+        self.assertGreater(times.atime, 0)
+
+        with self.assertRaises(OSError):
+            self.bag.timesfor("data/goober")
+
     def test_bag(self):
         # test that self.bag behaves like a bagit.Bag
         self.assertEqual(self.bag.algs, ["sha256"])
@@ -226,7 +242,38 @@ class TestExtendedReadWritableBag(test.TestCase):
 
     def test_is_head_multibag(self):
         self.assertTrue(self.bag.is_head_multibag())
+
+    def test_calc_oxum(self):
+        oxum = self.bag.calc_oxum()
+        self.assertTrue(isinstance(oxum, tuple))
+        self.assertEqual(len(oxum), 2)
+        self.assertTrue(all([isinstance(x, int) for x in oxum]))
+        self.assertEqual(oxum[1], 3)
+        self.assertEqual(oxum[0], 208)
     
+    def test_update_oxum(self):
+        del self.bag.info['Payload-Oxum']
+
+        oxum = self.bag.update_oxum()
+        self.assertTrue(isinstance(oxum, tuple))
+        self.assertEqual(len(oxum), 2)
+        self.assertTrue(all([isinstance(x, int) for x in oxum]))
+        self.assertEqual(oxum[1], 3)
+        self.assertEqual(oxum[0], 208)
+    
+        self.assertEqual(self.bag.info['Payload-Oxum'], "208.3")
+
+    def test_calc_bag_size(self):
+        size = self.bag.calc_bag_size()
+        self.assertTrue(isinstance(size, int))
+        self.assertEqual(size, 20832)
+
+    def test_update_bag_size(self):
+        size = self.bag.update_bag_size()
+        self.assertTrue(isinstance(size, int))
+        self.assertEqual(size, 20832)
+
+        self.assertEqual(self.bag.info['Bag-Size'], "20.83 kB")
 
 class TestExtendReadOnlyBag(test.TestCase):
 
@@ -273,6 +320,22 @@ class TestExtendReadOnlyBag(test.TestCase):
         self.assertEqual(self.bag.sizeof("data"), 0)
         with self.assertRaises(OSError):
             self.bag.sizeof("data/goober")
+
+    def test_timesfor(self):
+        times = self.bag.timesfor("data/trial1.json")
+        self.assertIsNotNone(times)
+        self.assertIsNone(times.ctime)
+        self.assertIsNone(times.atime)
+        self.assertGreater(times.mtime, 0)
+
+        times = self.bag.timesfor("data")
+        self.assertIsNotNone(times)
+        self.assertIsNone(times.ctime)
+        self.assertIsNone(times.atime)
+        self.assertGreater(times.mtime, 0)
+
+        with self.assertRaises(OSError):
+            self.bag.timesfor("data/goober")
 
     def test_bag(self):
         # test that self.bag behaves like a bagit.Bag
