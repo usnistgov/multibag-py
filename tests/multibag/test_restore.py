@@ -295,7 +295,10 @@ class TestRestorer(test.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(restored,"data","trial2.json")))
         self.assertTrue(os.path.isfile(os.path.join(restored,"data","trial3", "trial3a.json")))
         self.assertTrue(not os.path.isfile(os.path.join(restored,"data","trial4.json")))
-        
+
+        restoredbag = open_bag(self.v2)
+        restoredbag.validate()
+
         rstr = restore.BagRestorer(self.v2, compdir=self.tempdir)
         self.assertTrue(os.path.exists(self.v2))
         self.assertTrue(not os.path.exists(os.path.join(self.v2,"data","trial1.json")))
@@ -312,6 +315,9 @@ class TestRestorer(test.TestCase):
         with open(os.path.join(self.v2,"data","trial2.json")) as fd:
             content = fd.read()
         self.assertEqual('"Goober!"\n', content)
+
+        restoredbag = open_bag(self.v2)
+        restoredbag.validate()
         
 
 if __name__ == '__main__':
