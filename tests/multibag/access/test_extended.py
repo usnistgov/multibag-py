@@ -242,7 +242,38 @@ class TestExtendedReadWritableBag(test.TestCase):
 
     def test_is_head_multibag(self):
         self.assertTrue(self.bag.is_head_multibag())
+
+    def test_calc_oxum(self):
+        oxum = self.bag.calc_oxum()
+        self.assertTrue(isinstance(oxum, tuple))
+        self.assertEqual(len(oxum), 2)
+        self.assertTrue(all([isinstance(x, int) for x in oxum]))
+        self.assertEqual(oxum[1], 3)
+        self.assertEqual(oxum[0], 208)
     
+    def test_update_oxum(self):
+        del self.bag.info['Payload-Oxum']
+
+        oxum = self.bag.update_oxum()
+        self.assertTrue(isinstance(oxum, tuple))
+        self.assertEqual(len(oxum), 2)
+        self.assertTrue(all([isinstance(x, int) for x in oxum]))
+        self.assertEqual(oxum[1], 3)
+        self.assertEqual(oxum[0], 208)
+    
+        self.assertEqual(self.bag.info['Payload-Oxum'], "208.3")
+
+    def test_calc_bag_size(self):
+        size = self.bag.calc_bag_size()
+        self.assertTrue(isinstance(size, int))
+        self.assertEqual(size, 20832)
+
+    def test_update_bag_size(self):
+        size = self.bag.update_bag_size()
+        self.assertTrue(isinstance(size, int))
+        self.assertEqual(size, 20832)
+
+        self.assertEqual(self.bag.info['Bag-Size'], "20.83 kB")
 
 class TestExtendReadOnlyBag(test.TestCase):
 

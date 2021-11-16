@@ -423,6 +423,78 @@ class _ExtendedReadWritableMixin(ExtendedReadMixin):
             
             yield dir, subdirs, files
 
+    def calc_oxum(self):
+        """
+        calculate and return the Bagit-defined Payload-Oxum as a 2-tuple for 
+        the bag in its current state
+        :return:  a 2-tuple where the first element is the total number of 
+                  file bytes and the second element is the total number of 
+                  files.  
+        """
+        nf = 0
+        sz = 0
+        for root, dirs, files in self.walk("data"):
+            for f in files:
+                nf += 1
+                sz += self.sizeof("/".join([root, f]))
+        return (sz, nf)
+
+    def update_oxum(self):
+        """
+        calculate and save the current Payload_Oxum to the in-memory tag metadata (self.info).
+        The save() method should be called to commit this value into the bag.
+        """
+        oxum = self.calc_oxum()
+        self.info['Payload-Oxum'] = "%s.%s" % oxum
+        return oxum
+
+    def calc_bag_size(self):
+        """
+        estimate the current size of the bag in bytes.  The save() function should be called 
+        before this method for a more accurate estimate.
+        """
+        sz = 0
+        for root, dirs, files in self.walk():
+            for f in files + dirs:
+                sz += self.sizeof(os.path.join(root, f))
+
+        # fine adjustments
+        if 'Bag-Size' in self.info:
+            sz -= len(self.info['Bag-Size'])
+            sz += len(self._format_bytes(sz))
+
+        return sz
+
+    def update_bag_size(self):
+        """
+        estimate and save the current size of the bag to the in-memory tag metadata (self.info)
+        The save() method should be called before this method to get a more accurate estimate, 
+        and it should be called after this to commit this value into the bag.
+        """
+        sz = self.calc_bag_size()
+        self.info['Bag-Size'] = self._format_bytes(sz)
+        return sz
+
+    def _format_bytes(self, nbytes):
+        prefs = ["", "k", "M", "G", "T"]
+        ordr = 0
+        while nbytes >= 1000.0 and ordr < 4:
+            nbytes /= 1000.0
+            ordr += 1
+        pref = prefs[ordr]
+        ordr = 0
+        while nbytes >= 10.0:
+            nbytes /= 10.0
+            ordr += 1
+        nbytes = "{0:5f}".format(round(nbytes, 3) * 10**ordr)
+        if '.' in nbytes:
+            nbytes = re.sub(r"0+$", "", nbytes)
+        if nbytes.endswith('.'):
+            nbytes = nbytes[:-1]    
+        return "{0} {1}B".format(nbytes, pref)
+
+        
+
 class ExtendedReadWritableBag(Bag, _ExtendedReadWritableMixin):
     """
     A Bag with an extended interface.
