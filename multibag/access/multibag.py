@@ -734,12 +734,6 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
             nbytes = nbytes[:-1]    
         return "{0} {1}B".format(nbytes, pref)
 
-    
-
-    
-                                
-
-    
 
 class ReadOnlyHeadBag(ExtendedReadOnlyBag, HeadBagReadMixin):
     """
@@ -798,6 +792,8 @@ class HeadBag(ExtendedReadWritableBag, HeadBagUpdateMixin):
 
         :param str bagpath:  a filepath to the bag's root directory.  
         """
+        if not os.path.isdir(bagpath):
+            raise ValueError("HeadBag(): bagpath must point to a directory (for write access)")
         super(HeadBag, self).__init__(bagpath)
         HeadBagReadMixin.__init__(self)
         HeadBagUpdateMixin.__init__(self)
