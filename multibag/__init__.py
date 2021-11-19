@@ -13,7 +13,7 @@ from .access.multibag import HeadBag, as_headbag, is_headbag, open_headbag
 from .access.bagit import open_bag, BagError, BagValidationError
 from .validate import (MultibagValidationError, HeadBagValidator,
                        MemberBagValidator, validate_headbag, validate_memberbag)
-from .amend import SingleMultibagMaker
-
+from .amend import make_single_multibag, amend_bag_with, SingleMultibagMaker
+from .restore import restore_bag
 
 
