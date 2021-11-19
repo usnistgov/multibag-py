@@ -30,6 +30,14 @@ class BagRestorer(object):
     The :py:meth:`restore` method can be used to restore the full bag in one shot, 
     following the multibag metadata from a head bag; however, the other method allow more 
     fine-control over the restoration.
+
+    This class does not implement the bag aggregation specification exactly but rather an
+    equivalent alternative algorithm.  The specification outlines a method in which each 
+    member bag is copied into the destination bag in the order that they appear in the 
+    `member-bags.tsv` tag file.  This implementation copies the member bags in _reverse_ 
+    order, copying only those files that are not already in the destination bag.  The 
+    latter algorithm will by faster in generla as it avoids superfluous copying of files 
+    that will ultimately get overwritten by bags later in the list.  
     """
 
     def __init__(self, headbag, destbag=None, compdir=None, fetcher=None):
