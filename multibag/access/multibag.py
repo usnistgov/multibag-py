@@ -3,14 +3,14 @@ This module provides access to the informational content of a multibag
 aggregation.  In particular, it provides the read-only HeadBag class.
 """
 from __future__ import absolute_import
-import re, os, sys
+import re, os, sys, io
 from collections import OrderedDict
 
 from .bagit import Bag, ReadOnlyBag, open_bag
 from .exceptions import MultibagError, MissingMultibagFileError
 from .extended import (ExtendedReadMixin, ExtendedReadOnlyBag,
                        ExtendedReadWritableBag, as_extended)
-from ..constants import CURRENT_VERSION, CURRENT_REFERENCE, Version
+from ..constants import CURRENT_VERSION, CURRENT_REFERENCE, Version, DEF_ENC
 
 if sys.version_info[0] > 2:
     _unicode = str
@@ -433,7 +433,7 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
         self.ensure_tagdir()
         tagfile = os.path.join(self._bagdir, self.multibag_tag_dir,
                                'member-bags.tsv')
-        with open(tagfile, 'w') as fd:
+        with io.open(tagfile, 'w', encoding=DEF_ENC) as fd:
             for mi in self._memberbags:
                 fd.write(mi.format())
 
@@ -606,9 +606,9 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
         self.ensure_tagdir()
         tagfile = os.path.join(self._bagdir, self.multibag_tag_dir,
                                'file-lookup.tsv')
-        with open(tagfile, 'w') as fd:
+        with io.open(tagfile, 'w', encoding=DEF_ENC) as fd:
             for item in self._filelu.items():
-                fd.write("{0}\t{1}\n".format(item[0], item[1]))
+                fd.write(u"{0}\t{1}\n".format(item[0], item[1]))
 
     def clear_file_lookup(self):
         """
@@ -668,7 +668,7 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
             os.remove(tagfile)
 
         self.ensure_tagdir()
-        with open(tagfile, 'w') as fd:
+        with io.open(tagfile, 'w', encoding=DEF_ENC) as fd:
             for path in self._deleted:
                 fd.write(path + "\n")
 

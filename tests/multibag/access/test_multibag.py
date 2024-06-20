@@ -523,6 +523,12 @@ class TestReadWriteHeadBag(test.TestCase):
         self.bag.save_file_lookup()
         self.assertIsNone(self.bag.lookup_file("data/trial1.json", reread=True))
 
+        self.bag._filelu[u'data/trial\u03b1.json'] = 'samplembag3'
+        self.bag.save_file_lookup()
+        self.assertEqual(self.bag.lookup_file(u"data/trial\u03b1.json", reread=True),
+                         "samplembag3")
+        
+
     def test_save_file_lookup(self):
         self.clear_multibag()
         tagdir = os.path.join(self.bagdir, "multibag")
