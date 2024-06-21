@@ -487,7 +487,7 @@ class TestReadWriteHeadBag(test.TestCase):
         self.assertEqual(names, ["samplembag","samplembag2"])
         
         self.clear_multibag()
-        self.bag.add_member_bag(b"samplembag2")
+        self.bag.add_member_bag(b"samplembag2" if mb.ispy2 else "samplembag2")
         self.assertEqual(self.bag.member_bag_names, ["samplembag2"])
         self.bag.save_member_bags()
         with io.open(os.path.join(self.bagdir, "multibag","member-bags.tsv"), encoding='utf-8') as fd:
@@ -558,7 +558,8 @@ class TestReadWriteHeadBag(test.TestCase):
             [ "data/gurn/goober.json", "samplembag2" ]
         ])
 
-        self.bag.add_file_lookup(b"data/trial\xce\xb1.tiff", b"samplebag")
+        fname = b"data/trial\xce\xb1.tiff" if mb.ispy2 else "data/trial\u03b1.tiff"
+        self.bag.add_file_lookup(fname, "samplebag")
         self.bag.save_file_lookup()
         with io.open(lufile, encoding='utf-8') as fd:
             items = [line.strip().split('\t') for line in fd]
@@ -567,7 +568,8 @@ class TestReadWriteHeadBag(test.TestCase):
             [ "data/gurn/goober.json", "samplembag2" ],
             [ u"data/trial\u03b1.tiff", "samplebag"]
         ])
-        self.assertTrue(isinstance(items[0][0], unicode))
+        if mb.ispy2:
+            self.assertTrue(isinstance(items[0][0], unicode))
         
 
     def test_set_deleted(self):

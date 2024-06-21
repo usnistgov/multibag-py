@@ -22,6 +22,8 @@ _about_mbag_morsel = "complies with the Multibag BagIt profile"
 ABOUT_MBAG = "This bag {0}.  For more information, refer to the URL given by Multibag-Reference tag." \
              .format(_about_mbag_morsel)
 
+ispy2 = sys.version_info.major == 2
+
 class MemberInfo(object):
     """
     a description of a member bag of a multibag aggregation as given by a 
@@ -436,7 +438,7 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
         with io.open(tagfile, 'w', encoding=DEF_ENC) as fd:
             for mi in self._memberbags:
                 out = mi.format()
-                if isinstance(out, str):
+                if ispy2 and isinstance(out, str):
                     out = out.decode(DEF_ENC)
                 fd.write(out)
 
@@ -611,11 +613,12 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
                                'file-lookup.tsv')
         with io.open(tagfile, 'w', encoding=DEF_ENC) as fd:
             for item in self._filelu.items():
-                item = list(item)
-                if isinstance(item[0], str):
-                    item[0] = item[0].decode(DEF_ENC)
-                if isinstance(item[1], str):
-                    item[1] = item[1].decode(DEF_ENC)
+                if ispy2:
+                    item = list(item)
+                    if isinstance(item[0], str):
+                        item[0] = item[0].decode(DEF_ENC)
+                    if isinstance(item[1], str):
+                        item[1] = item[1].decode(DEF_ENC)
                 fd.write(u"{0}\t{1}\n".format(item[0], item[1]))
 
     def clear_file_lookup(self):
