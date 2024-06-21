@@ -7,6 +7,7 @@ CURRENT_VERSION = "0.4"
 CURRENT_REFERENCE = "https://github.com/usnistgov/multibag-py/blob/master/docs/multibag-profile-spec.md"
 
 DEFAULT_TAG_DIR = "multibag"
+DEF_ENC = 'utf-8'
 
 if sys.version_info[0] > 2:
     _unicode = str

@@ -3,14 +3,14 @@ This module provides access to the informational content of a multibag
 aggregation.  In particular, it provides the read-only HeadBag class.
 """
 from __future__ import absolute_import
-import re, os, sys
+import re, os, sys, io
 from collections import OrderedDict
 
 from .bagit import Bag, ReadOnlyBag, open_bag
 from .exceptions import MultibagError, MissingMultibagFileError
 from .extended import (ExtendedReadMixin, ExtendedReadOnlyBag,
                        ExtendedReadWritableBag, as_extended)
-from ..constants import CURRENT_VERSION, CURRENT_REFERENCE, Version
+from ..constants import CURRENT_VERSION, CURRENT_REFERENCE, Version, DEF_ENC
 
 if sys.version_info[0] > 2:
     _unicode = str
@@ -21,6 +21,8 @@ _spre = re.compile(r' +')
 _about_mbag_morsel = "complies with the Multibag BagIt profile"
 ABOUT_MBAG = "This bag {0}.  For more information, refer to the URL given by Multibag-Reference tag." \
              .format(_about_mbag_morsel)
+
+ispy2 = sys.version_info.major == 2
 
 class MemberInfo(object):
     """
@@ -433,9 +435,12 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
         self.ensure_tagdir()
         tagfile = os.path.join(self._bagdir, self.multibag_tag_dir,
                                'member-bags.tsv')
-        with open(tagfile, 'w') as fd:
+        with io.open(tagfile, 'w', encoding=DEF_ENC) as fd:
             for mi in self._memberbags:
-                fd.write(mi.format())
+                out = mi.format()
+                if ispy2 and isinstance(out, str):
+                    out = out.decode(DEF_ENC)
+                fd.write(out)
 
     def lookup_file(self, filepath, reread=False):
         """
@@ -606,9 +611,15 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
         self.ensure_tagdir()
         tagfile = os.path.join(self._bagdir, self.multibag_tag_dir,
                                'file-lookup.tsv')
-        with open(tagfile, 'w') as fd:
+        with io.open(tagfile, 'w', encoding=DEF_ENC) as fd:
             for item in self._filelu.items():
-                fd.write("{0}\t{1}\n".format(item[0], item[1]))
+                if ispy2:
+                    item = list(item)
+                    if isinstance(item[0], str):
+                        item[0] = item[0].decode(DEF_ENC)
+                    if isinstance(item[1], str):
+                        item[1] = item[1].decode(DEF_ENC)
+                fd.write(u"{0}\t{1}\n".format(item[0], item[1]))
 
     def clear_file_lookup(self):
         """
@@ -668,9 +679,9 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
             os.remove(tagfile)
 
         self.ensure_tagdir()
-        with open(tagfile, 'w') as fd:
+        with io.open(tagfile, 'w', encoding=DEF_ENC) as fd:
             for path in self._deleted:
-                fd.write(path + "\n")
+                fd.write(path + u"\n")
 
     def update_info(self, version=None, profver=CURRENT_VERSION):
         """

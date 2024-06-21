@@ -1,10 +1,10 @@
 """
 functions for restoring a bag from its multibag components.
 """
-import os, sys, re, shutil, io, time, errno
+import os, sys, re, shutil, io, time, errno, io
 from collections import OrderedDict
 
-from .constants import CURRENT_VERSION as MBAG_VERSION
+from .constants import CURRENT_VERSION as MBAG_VERSION, DEF_ENC
 from .access.bagit import Bag, ReadOnlyBag
 from .access.multibag import (is_headbag, as_headbag, open_headbag, MissingMultibagFileError,
                               HeadBag, ReadOnlyHeadBag, MultibagError, ExtendedReadWritableBag)
@@ -243,13 +243,15 @@ class BagRestorer(object):
         for alg in updated_by_alg:
             files = [f for f in updated_by_alg[alg].keys() if f.startswith("data/")]
             if len(files) > 0:
-                with open(os.path.join(self._destdir, "manifest-%s.txt" % alg), 'w') as fd:
+                mfp = os.path.join(self._destdir, "manifest-%s.txt" % alg)
+                with io.open(mfp, 'w', encoding=DEF_ENC) as fd:
                     for f in files:
                         fd.write("%s %s\n" % (updated_by_alg[alg][f], f))
 
             files = [f for f in updated_by_alg[alg].keys() if not f.startswith("data/")]
             if len(files) > 0:
-                with open(os.path.join(self._destdir, "tagmanifest-%s.txt" % alg), 'w') as fd:
+                mfp = os.path.join(self._destdir, "tagmanifest-%s.txt" % alg)
+                with io.open(mfp, 'w', encoding=DEF_ENC) as fd:
                     for f in files:
                         fd.write("%s %s\n" % (updated_by_alg[alg][f], f))
 
@@ -274,7 +276,8 @@ class BagRestorer(object):
                         if len(parts) > 1 and parts[1]:
                             fetch[parts[1]] = line
         if fetch:
-            with open(os.path.join(self._destdir, "fetch.txt"), 'w') as fd:
+            fp = os.path.join(self._destdir, "fetch.txt")
+            with io.open(fp, 'w', encoding=DEF_ENC) as fd:
                 for f in fetch:
                     fd.write(fetch[f])
 
@@ -291,7 +294,8 @@ class BagRestorer(object):
         if self._head.isfile("multibag/aggregation-info.txt"):
             with self._head.open_text_file("multibag/aggregation-info.txt") as fd:
                 content = fd.read()
-            with open(os.path.join(self._destdir, "bag-info.txt"), 'w') as fd:
+            bif = os.path.join(self._destdir, "bag-info.txt")
+            with io.open(bif, 'w', encoding=DEF_ENC) as fd:
                 fd.write(content)
                     
         if not self._inplace:
