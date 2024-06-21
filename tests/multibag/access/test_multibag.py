@@ -3,7 +3,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import os, pdb, logging
+import os, pdb, logging, io
 import tempfile, shutil
 import unittest as test
 from collections import OrderedDict
@@ -487,12 +487,19 @@ class TestReadWriteHeadBag(test.TestCase):
         self.assertEqual(names, ["samplembag","samplembag2"])
         
         self.clear_multibag()
-        self.bag.add_member_bag("samplembag2")
+        self.bag.add_member_bag(b"samplembag2")
         self.assertEqual(self.bag.member_bag_names, ["samplembag2"])
         self.bag.save_member_bags()
-        with open(os.path.join(self.bagdir, "multibag","member-bags.tsv")) as fd:
+        with io.open(os.path.join(self.bagdir, "multibag","member-bags.tsv"), encoding='utf-8') as fd:
             names = [line.strip() for line in fd]
         self.assertEqual(names, ["samplembag2"])
+
+        self.bag.add_member_bag(u"samplebag\u03b1")
+        self.bag.save_member_bags()
+        with io.open(os.path.join(self.bagdir, "multibag","member-bags.tsv"), encoding='utf-8') as fd:
+            names = [line.strip() for line in fd]
+        self.assertEqual(names, [u"samplembag2", u"samplebag\u03b1"])
+        
 
     def test_add_file_lookup(self):
         self.assertEqual(self.bag.lookup_file("data/trial1.json"), "samplembag")

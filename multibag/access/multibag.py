@@ -435,7 +435,10 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
                                'member-bags.tsv')
         with io.open(tagfile, 'w', encoding=DEF_ENC) as fd:
             for mi in self._memberbags:
-                fd.write(mi.format())
+                out = mi.format()
+                if isinstance(out, str):
+                    out = out.decode(DEF_ENC)
+                fd.write(out)
 
     def lookup_file(self, filepath, reread=False):
         """
@@ -670,7 +673,7 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
         self.ensure_tagdir()
         with io.open(tagfile, 'w', encoding=DEF_ENC) as fd:
             for path in self._deleted:
-                fd.write(path + "\n")
+                fd.write(path + u"\n")
 
     def update_info(self, version=None, profver=CURRENT_VERSION):
         """
