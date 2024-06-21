@@ -611,6 +611,11 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
                                'file-lookup.tsv')
         with io.open(tagfile, 'w', encoding=DEF_ENC) as fd:
             for item in self._filelu.items():
+                item = list(item)
+                if isinstance(item[0], str):
+                    item[0] = item[0].decode(DEF_ENC)
+                if isinstance(item[1], str):
+                    item[1] = item[1].decode(DEF_ENC)
                 fd.write(u"{0}\t{1}\n".format(item[0], item[1]))
 
     def clear_file_lookup(self):

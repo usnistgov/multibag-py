@@ -558,6 +558,18 @@ class TestReadWriteHeadBag(test.TestCase):
             [ "data/gurn/goober.json", "samplembag2" ]
         ])
 
+        self.bag.add_file_lookup(b"data/trial\xce\xb1.tiff", b"samplebag")
+        self.bag.save_file_lookup()
+        with io.open(lufile, encoding='utf-8') as fd:
+            items = [line.strip().split('\t') for line in fd]
+        self.assertEqual(items, [
+            [ "data/trial1.json", "samplembag" ],
+            [ "data/gurn/goober.json", "samplembag2" ],
+            [ u"data/trial\u03b1.tiff", "samplebag"]
+        ])
+        self.assertTrue(isinstance(items[0][0], unicode))
+        
+
     def test_set_deleted(self):
         tagdir = os.path.join(self.bagdir, "multibag")
         delfile = os.path.join(tagdir, "deleted.txt")
