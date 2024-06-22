@@ -2,7 +2,11 @@
 This module provides base classes and infrastructure for multibag validation
 """
 import sys
-from collections import Sequence, OrderedDict
+from collections import OrderedDict
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 
 from ..constants import CURRENT_VERSION
 from ..access.bagit import BagValidationError, BagError, open_bag
