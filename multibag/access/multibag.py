@@ -275,6 +275,8 @@ class HeadBagReadMixin(ExtendedReadMixin):
         """
         if reread or self._filelu is None:
             self._cache_file_lookup()
+        if ispy2 and isinstance(filepath, str):
+            filepath = filepath.decode(DEF_ENC)
         return self._filelu.get(filepath)
 
     def files_in_member(self, bagname):
@@ -469,6 +471,8 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
            not isinstance(bagname, (str, _unicode)):
             raise TypeError("input arguments must be strings: " +
                             str( (filepath, bagname,) ))
+        if ispy2 and isinstance(filepath, str):
+            filepath = filepath.decode(DEF_ENC)  # or the dict key won't match
         if self._filelu is None:
             try:
                 self._cache_file_lookup()
@@ -488,6 +492,8 @@ class HeadBagUpdateMixin(HeadBagReadMixin):
                 self._cache_file_lookup()
             except MissingMultibagFileError:
                 return
+        if ispy2 and isinstance(filepath, str):
+            filepath = filepath.decode(DEF_ENC)  # or the dict key won't match
         if filepath in self._filelu:
             del self._filelu[filepath]
 
