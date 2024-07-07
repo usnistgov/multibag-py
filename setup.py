@@ -2,7 +2,7 @@ import os, sys, subprocess, unittest
 from setuptools import setup
 
 setup(name='multibag',
-      version='0.2',
+      version='0.6',
       description="multibag: a Python-based reference implementation of the Multibag BagIt profile",
       author="Ray Plante",
       author_email="raymond.plante@nist.gov",
